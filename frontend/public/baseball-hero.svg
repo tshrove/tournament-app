@@ -1,0 +1,29 @@
+<svg width="500" height="400" viewBox="0 0 500 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background elements -->
+  <circle cx="250" cy="200" r="150" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="2"/>
+  
+  <!-- Baseball -->
+  <circle cx="250" cy="200" r="100" fill="white" stroke="#1F2937" stroke-width="3"/>
+  
+  <!-- Baseball stitches -->
+  <path d="M250 100C280 130 280 170 250 200C220 230 220 270 250 300" stroke="#EF4444" stroke-width="5" stroke-linecap="round"/>
+  <path d="M250 100C220 130 220 170 250 200C280 230 280 270 250 300" stroke="#EF4444" stroke-width="5" stroke-linecap="round"/>
+  
+  <!-- Trophy elements -->
+  <rect x="235" y="70" width="30" height="10" rx="2" fill="#FBBF24"/>
+  <rect x="240" y="45" width="20" height="25" rx="2" fill="#FBBF24"/>
+  <path d="M260 70H275C282 70 285 75 285 80C285 90 275 90 270 90H260" stroke="#FBBF24" stroke-width="8"/>
+  <path d="M240 70H225C218 70 215 75 215 80C215 90 225 90 230 90H240" stroke="#FBBF24" stroke-width="8"/>
+  
+  <!-- Baseball bat -->
+  <rect x="345" y="130" width="20" height="180" rx="10" transform="rotate(45 345 130)" fill="#A87456"/>
+  
+  <!-- Diamond -->
+  <path d="M160 330L250 280L340 330L250 380L160 330Z" fill="#4361EE" fill-opacity="0.2" stroke="#4361EE" stroke-width="2"/>
+  
+  <!-- Decorative elements -->
+  <circle cx="150" cy="120" r="15" fill="#F72585" fill-opacity="0.3"/>
+  <circle cx="360" cy="280" r="25" fill="#4361EE" fill-opacity="0.3"/>
+  <circle cx="120" cy="250" r="20" fill="#10B981" fill-opacity="0.3"/>
+  <circle cx="380" cy="150" r="12" fill="#FBBF24" fill-opacity="0.3"/>
+</svg> 

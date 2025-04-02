@@ -1,0 +1,344 @@
+<script setup>
+import { defineProps, defineEmits } from 'vue';
+
+const props = defineProps({
+  games: {
+    type: Array,
+    required: true
+  },
+  allowDelete: {
+    type: Boolean,
+    default: true
+  },
+  showScores: {
+    type: Boolean,
+    default: true
+  }
+});
+
+const emit = defineEmits(['delete-game']);
+
+// Format date for display
+const formatDate = (dateString) => {
+  if (!dateString) return 'TBD';
+  const date = new Date(dateString);
+  return date.toLocaleDateString();
+};
+
+// Format time for display
+const formatTime = (timeString) => {
+  if (!timeString) return 'TBD';
+  return timeString.substring(0, 5); // Format HH:MM
+};
+
+// Handle delete button click
+const handleDelete = (gameId) => {
+  if (confirm('Are you sure you want to remove this game?')) {
+    emit('delete-game', gameId);
+  }
+};
+
+// Determine winner and loser for styling
+const getGameOutcome = (game) => {
+  if (game.status !== 'Completed' || game.team1_score === null || game.team2_score === null) {
+    return { winner: null, loser: null };
+  }
+  
+  if (game.team1_score > game.team2_score) {
+    return { winner: 'team1', loser: 'team2' };
+  } else if (game.team2_score > game.team1_score) {
+    return { winner: 'team2', loser: 'team1' };
+  } else {
+    return { winner: 'tie', loser: 'tie' };
+  }
+};
+</script>
+
+<template>
+  <div class="schedule-table-container">
+    <table class="schedule-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Teams</th>
+          <th v-if="showScores">Score</th>
+          <th>Field</th>
+          <th>Status</th>
+          <th v-if="allowDelete">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr 
+          v-for="game in games" 
+          :key="game.id" 
+          :class="{ completed: game.status === 'Completed' }"
+        >
+          <td>{{ formatDate(game.date) }}</td>
+          <td>{{ formatTime(game.time) }}</td>
+          <td class="teams-column">
+            <div class="matchup">
+              <span 
+                class="team" 
+                :class="{ 
+                  'winner': getGameOutcome(game).winner === 'team1',
+                  'loser': getGameOutcome(game).loser === 'team1'
+                }"
+              >
+                {{ game.team1_name }}
+              </span>
+              
+              <span v-if="!showScores && game.team1_score !== null && game.team2_score !== null" class="vs-text">vs</span>
+              
+              <span 
+                class="team" 
+                :class="{ 
+                  'winner': getGameOutcome(game).winner === 'team2',
+                  'loser': getGameOutcome(game).loser === 'team2'
+                }"
+              >
+                {{ game.team2_name }}
+              </span>
+            </div>
+          </td>
+          <td v-if="showScores" class="scores-column">
+            <div v-if="game.team1_score !== null && game.team2_score !== null" class="score-container">
+              <span 
+                class="score" 
+                :class="{ 'winner-score': getGameOutcome(game).winner === 'team1' }"
+              >
+                {{ game.team1_score }}
+              </span>
+              <span class="score-divider">-</span>
+              <span 
+                class="score" 
+                :class="{ 'winner-score': getGameOutcome(game).winner === 'team2' }"
+              >
+                {{ game.team2_score }}
+              </span>
+            </div>
+            <span v-else class="no-score">Pending</span>
+          </td>
+          <td>{{ game.field }}</td>
+          <td>
+            <span class="status-badge" :class="game.status.toLowerCase()">
+              {{ game.status }}
+            </span>
+          </td>
+          <td v-if="allowDelete" class="actions">
+            <button 
+              @click="handleDelete(game.id)" 
+              class="btn-delete" 
+              title="Remove game"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4H3.33333H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5.33333 4V2.66667C5.33333 2.31304 5.47381 1.97391 5.72386 1.72386C5.97391 1.47381 6.31304 1.33333 6.66667 1.33333H9.33333C9.68696 1.33333 10.0261 1.47381 10.2761 1.72386C10.5262 1.97391 10.6667 2.31304 10.6667 2.66667V4M12.6667 4V13.3333C12.6667 13.687 12.5262 14.0261 12.2761 14.2761C12.0261 14.5262 11.687 14.6667 11.3333 14.6667H4.66667C4.31304 14.6667 3.97391 14.5262 3.72386 14.2761C3.47381 14.0261 3.33333 13.687 3.33333 13.3333V4H12.6667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Delete</span>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</template>
+
+<style scoped>
+.schedule-table-container {
+  overflow-x: auto;
+  margin: var(--space-md) 0;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.schedule-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background-color: var(--color-background-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.schedule-table th,
+.schedule-table td {
+  padding: var(--space-md);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.schedule-table th {
+  background-color: var(--color-accent);
+  font-weight: 600;
+  color: white;
+  position: relative;
+}
+
+.schedule-table th:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 25%;
+  height: 50%;
+  width: 1px;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.schedule-table tr:last-child td {
+  border-bottom: none;
+}
+
+.schedule-table tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+.schedule-table tbody tr:hover {
+  background-color: var(--color-background-dark);
+}
+
+.teams-column {
+  min-width: 200px;
+}
+
+.matchup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.team {
+  font-weight: 500;
+  padding: var(--space-xs) 0;
+  transition: all var(--transition-fast);
+}
+
+.team.winner {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.team.loser {
+  color: var(--color-text-light);
+}
+
+.scores-column {
+  text-align: center;
+}
+
+.score-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  margin: var(--space-xs) 0;
+  padding: var(--space-xs) var(--space-sm);
+  background-color: var(--color-background-dark);
+  border-radius: var(--radius-sm);
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.score {
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.winner-score {
+  color: var(--color-success);
+  font-size: 1.1rem;
+}
+
+.score-divider {
+  color: var(--color-text-light);
+}
+
+.no-score {
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+  font-style: italic;
+}
+
+.vs-text {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--color-text-light);
+  margin: 0 auto;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.scheduled {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--color-info);
+}
+
+.status-badge.in.progress, .status-badge.in.progress {
+  background-color: rgba(251, 191, 36, 0.1);
+  color: var(--color-warning);
+}
+
+.status-badge.completed {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
+}
+
+.status-badge.cancelled {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+}
+
+.actions {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-sm);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.btn-delete:hover {
+  background-color: var(--color-danger);
+  color: white;
+}
+
+.btn-delete svg {
+  width: 16px;
+  height: 16px;
+}
+
+tr.completed {
+  background-color: rgba(243, 244, 246, 0.3);
+}
+
+@media (max-width: 768px) {
+  .schedule-table th,
+  .schedule-table td {
+    padding: var(--space-sm);
+    font-size: 0.9rem;
+  }
+  
+  .btn-delete span {
+    display: none;
+  }
+}
+</style> 

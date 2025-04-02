@@ -131,14 +131,6 @@
           </table>
         </div>
       </section>
-      
-      <section class="admin-link-section">
-        <div class="admin-card">
-          <h3>Tournament Administration</h3>
-          <p>Manage teams, schedule, and brackets</p>
-          <router-link to="/admin" class="btn btn-primary">Admin Dashboard</router-link>
-        </div>
-      </section>
     </div>
   </div>
 </template>
@@ -297,7 +289,7 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.schedule-section, .rankings-section, .admin-link-section, .game-results-section {
+.schedule-section, .rankings-section, .game-results-section {
   background-color: var(--color-background-card);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
@@ -522,24 +514,6 @@ onMounted(() => {
 .rankings-table .negative {
   color: var(--color-danger);
   font-weight: 600;
-}
-
-/* Admin card */
-.admin-card {
-  text-align: center;
-  padding: var(--space-md);
-  background-color: rgba(67, 97, 238, 0.05);
-  border-radius: var(--radius-md);
-}
-
-.admin-card h3 {
-  margin-bottom: var(--space-xs);
-  color: var(--color-accent);
-}
-
-.admin-card p {
-  color: var(--color-text-light);
-  margin-bottom: var(--space-md);
 }
 
 /* Responsive adjustments */

@@ -30,6 +30,17 @@
                 rows="3"
               ></textarea>
             </div>
+            <div class="form-group">
+              <label for="admin-password">Admin Password (Optional)</label>
+              <input 
+                id="admin-password" 
+                type="password" 
+                v-model="adminPassword" 
+                class="form-control" 
+                placeholder="Set custom admin password"
+              >
+              <small class="form-help">Set a custom password for admin access. If left empty, the default password will be used.</small>
+            </div>
             <div class="form-actions">
               <button 
                 class="btn btn-primary" 
@@ -64,6 +75,7 @@ const router = useRouter();
 // Tournament settings
 const tournamentName = ref('');
 const tournamentDescription = ref('');
+const adminPassword = ref('');
 const saving = ref(false);
 const settingsSaved = ref(false);
 const settingsError = ref('');
@@ -74,6 +86,7 @@ const loadSettings = async () => {
     const response = await api.getSettings();
     tournamentName.value = response.data.name;
     tournamentDescription.value = response.data.description || '';
+    adminPassword.value = response.data.adminPassword || '';
   } catch (err) {
     console.error('Error loading tournament settings:', err);
     settingsError.value = 'Failed to load settings';
@@ -89,7 +102,8 @@ const saveSettings = async () => {
   try {
     await api.updateSettings({
       name: tournamentName.value,
-      description: tournamentDescription.value
+      description: tournamentDescription.value,
+      adminPassword: adminPassword.value
     });
     settingsSaved.value = true;
     
@@ -201,6 +215,13 @@ onMounted(() => {
   border-color: var(--color-primary);
   outline: none;
   box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+}
+
+.form-help {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--color-text-light);
+  font-size: 0.85rem;
 }
 
 .form-actions {

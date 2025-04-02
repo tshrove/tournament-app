@@ -104,6 +104,7 @@ class TournamentSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, default="Baseball Tournament")
     description = db.Column(db.String(500), nullable=True)
+    admin_password = db.Column(db.String(100), nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
     def __repr__(self):
@@ -114,5 +115,6 @@ class TournamentSettings(db.Model):
             'id': self.id,
             'name': self.name,
             'description': self.description,
+            'adminPassword': self.admin_password,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

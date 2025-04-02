@@ -9,6 +9,8 @@ import ManageScheduleView from '../views/ManageScheduleView.vue'
 import AdminView from '../views/AdminView.vue'
 import GameScoringView from '../views/GameScoringView.vue'
 import TournamentSettingsView from '../views/TournamentSettingsView.vue'
+import AdminLoginView from '../views/AdminLoginView.vue'
+import auth from '../store/auth'
 
 const routes = [
   // Public routes
@@ -16,6 +18,14 @@ const routes = [
     path: '/',
     name: 'Home',
     component: HomeView,
+    meta: { isPublic: true }
+  },
+  
+  // Admin login route
+  {
+    path: '/admin-login',
+    name: 'AdminLogin',
+    component: AdminLoginView,
     meta: { isPublic: true }
   },
   
@@ -82,5 +92,25 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+// Navigation guard to protect admin routes
+router.beforeEach((to, from, next) => {
+  // Check if the route requires admin access
+  if (to.matched.some(record => record.meta.isAdmin)) {
+    // If not authenticated, redirect to login page with return URL
+    if (!auth.state.isAuthenticated) {
+      next({
+        path: '/admin-login',
+        query: { redirect: to.fullPath }
+      });
+    } else {
+      // User is authenticated, allow access
+      next();
+    }
+  } else {
+    // Not an admin route, allow access
+    next();
+  }
+});
 
 export default router 

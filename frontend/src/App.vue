@@ -1,6 +1,7 @@
 <script setup>
 import { ref, provide } from 'vue';
 import ToastNotification from './components/ToastNotification.vue'; // Import the component
+import auth from './store/auth';
 
 // Notification State
 const notification = ref({
@@ -33,6 +34,13 @@ const mobileMenuOpen = ref(false);
 const toggleMobileMenu = () => {
   mobileMenuOpen.value = !mobileMenuOpen.value;
 };
+
+// Handle logout
+const handleLogout = () => {
+  auth.logout();
+  showNotification('You have been logged out', 'info');
+  mobileMenuOpen.value = false;
+};
 </script>
 
 <template>
@@ -55,6 +63,9 @@ const toggleMobileMenu = () => {
           <router-link to="/admin" class="nav-link admin-link" @click="mobileMenuOpen = false">
             <span class="admin-icon">⚙️</span> Admin
           </router-link>
+          <button v-if="auth.state.isAuthenticated" @click="handleLogout" class="nav-link logout-button">
+            <span class="logout-icon">🔒</span> Logout
+          </button>
         </nav>
       </div>
     </header>
@@ -198,6 +209,27 @@ const toggleMobileMenu = () => {
 }
 
 .admin-icon {
+  font-size: 0.9rem;
+}
+
+.logout-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background-color: rgba(226, 76, 76, 0.1);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.logout-button:hover {
+  background-color: rgba(226, 76, 76, 0.2);
+}
+
+.logout-icon {
   font-size: 0.9rem;
 }
 

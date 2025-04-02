@@ -680,11 +680,15 @@ def update_settings():
         if 'description' in data:
             settings.description = data['description']
         
+        # Handle admin password
+        if 'adminPassword' in data:
+            settings.admin_password = data['adminPassword']
+        
         db.session.commit()
         return jsonify(settings.to_dict())
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e)}), 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)

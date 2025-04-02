@@ -8,6 +8,7 @@ import ScheduleView from '../views/ScheduleView.vue'
 import ManageScheduleView from '../views/ManageScheduleView.vue'
 import AdminView from '../views/AdminView.vue'
 import GameScoringView from '../views/GameScoringView.vue'
+import TournamentSettingsView from '../views/TournamentSettingsView.vue'
 
 const routes = [
   // Public routes
@@ -61,6 +62,12 @@ const routes = [
     path: '/game-scoring',
     name: 'GameScoring',
     component: GameScoringView,
+    meta: { isAdmin: true }
+  },
+  {
+    path: '/tournament-settings',
+    name: 'TournamentSettings',
+    component: TournamentSettingsView,
     meta: { isAdmin: true }
   }
   // Add a placeholder route for now

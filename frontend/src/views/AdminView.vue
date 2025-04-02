@@ -6,51 +6,19 @@
     </header>
     
     <div class="admin-content">
-      <!-- Tournament Settings Section -->
-      <section class="tournament-settings-section">
-        <div class="admin-nav-card">
-          <h2>Tournament Settings</h2>
-          <div class="settings-form">
-            <div class="form-group">
-              <label for="tournament-name">Tournament Name</label>
-              <input 
-                id="tournament-name" 
-                type="text" 
-                v-model="tournamentName" 
-                class="form-control" 
-                placeholder="Enter tournament name"
-              >
-            </div>
-            <div class="form-group">
-              <label for="tournament-description">Description (Optional)</label>
-              <textarea 
-                id="tournament-description" 
-                v-model="tournamentDescription" 
-                class="form-control" 
-                placeholder="Enter tournament description"
-                rows="3"
-              ></textarea>
-            </div>
-            <div class="form-actions">
-              <button 
-                class="btn btn-primary" 
-                @click="saveSettings" 
-                :disabled="saving"
-              >
-                {{ saving ? 'Saving...' : 'Save Settings' }}
-              </button>
-              <span v-if="settingsSaved" class="save-success">✓ Settings saved</span>
-              <span v-if="settingsError" class="save-error">{{ settingsError }}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-      
       <section class="admin-nav-section">
         <div class="admin-nav-card">
           <h2>Administrative Functions</h2>
           
           <div class="admin-nav-links">
+            <router-link to="/tournament-settings" class="admin-nav-link">
+              <div class="icon-container">⚙️</div>
+              <div class="admin-nav-link-content">
+                <h3>Tournament Settings</h3>
+                <p>Configure tournament details</p>
+              </div>
+            </router-link>
+            
             <router-link to="/manage-teams" class="admin-nav-link">
               <div class="icon-container">👥</div>
               <div class="admin-nav-link-content">
@@ -107,6 +75,9 @@
             <button class="btn btn-primary" @click="navigateTo('/game-scoring')">
               Update Game Scores
             </button>
+            <button class="btn btn-primary" @click="navigateTo('/tournament-settings')">
+              Edit Tournament Settings
+            </button>
           </div>
         </div>
         
@@ -124,62 +95,12 @@
 
 <script setup>
 import { useRouter } from 'vue-router';
-import { ref, onMounted } from 'vue';
-import api from '../services/api';
 
 const router = useRouter();
-
-// Tournament settings
-const tournamentName = ref('');
-const tournamentDescription = ref('');
-const saving = ref(false);
-const settingsSaved = ref(false);
-const settingsError = ref('');
-
-// Load tournament settings
-const loadSettings = async () => {
-  try {
-    const response = await api.getSettings();
-    tournamentName.value = response.data.name;
-    tournamentDescription.value = response.data.description || '';
-  } catch (err) {
-    console.error('Error loading tournament settings:', err);
-    settingsError.value = 'Failed to load settings';
-  }
-};
-
-// Save tournament settings
-const saveSettings = async () => {
-  saving.value = true;
-  settingsSaved.value = false;
-  settingsError.value = '';
-  
-  try {
-    await api.updateSettings({
-      name: tournamentName.value,
-      description: tournamentDescription.value
-    });
-    settingsSaved.value = true;
-    
-    // Reset success message after a delay
-    setTimeout(() => {
-      settingsSaved.value = false;
-    }, 3000);
-  } catch (err) {
-    console.error('Error saving tournament settings:', err);
-    settingsError.value = 'Failed to save settings';
-  } finally {
-    saving.value = false;
-  }
-};
 
 const navigateTo = (path) => {
   router.push(path);
 };
-
-onMounted(() => {
-  loadSettings();
-});
 </script>
 
 <style scoped>
@@ -208,67 +129,6 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 2fr;
   gap: var(--space-xl);
-}
-
-.tournament-settings-section {
-  grid-column: 1 / -1;
-  margin-bottom: var(--space-lg);
-}
-
-.settings-form {
-  margin-top: var(--space-md);
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.form-control {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-.form-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.btn-primary {
-  background-color: var(--color-primary);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.btn-primary:hover {
-  background-color: var(--color-primary-dark);
-}
-
-.btn-primary:disabled {
-  background-color: var(--color-muted);
-  cursor: not-allowed;
-}
-
-.save-success {
-  color: var(--color-success, #4CAF50);
-}
-
-.save-error {
-  color: var(--color-error, #f44336);
 }
 
 .admin-nav-section, .quick-actions-section {
@@ -362,6 +222,37 @@ onMounted(() => {
 .admin-action-card p {
   color: var(--color-text-light);
   margin-bottom: var(--space-md);
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.btn-outline {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  text-decoration: none;
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.btn-outline:hover {
+  background-color: rgba(67, 97, 238, 0.05);
+  text-decoration: none;
 }
 
 /* Responsive Adjustments */

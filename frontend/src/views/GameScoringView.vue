@@ -178,8 +178,11 @@ const isEditingScores = ref(false);
 // Format date for display
 const formatDate = (dateString) => {
   if (!dateString) return 'TBD';
-  const date = new Date(dateString);
-  return date.toLocaleDateString();
+  // Create date with timezone handling to avoid date shift
+  // Parse the ISO date and add a "T00:00:00Z" to ensure it's treated as UTC
+  const isoDate = dateString.includes('T') ? dateString : `${dateString}T00:00:00Z`;
+  const date = new Date(isoDate);
+  return date.toLocaleDateString(undefined, { timeZone: 'UTC' });
 };
 
 // Format time for display

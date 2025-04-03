@@ -84,6 +84,10 @@ const handleLogout = () => {
       <div class="container">
         <div class="footer-content">
           <p>&copy; {{ new Date().getFullYear() }} Launchpad</p>
+          <div class="sponsor-badge">
+            <span>Developed & Sponsored by</span>
+            <a href="https://www.facebook.com/profile.php?id=61561326677708" target="_blank" rel="noopener noreferrer" class="sponsor-name">🚀 Rocket City Rockets</a>
+          </div>
           <div class="footer-links">
             <a href="#" class="footer-link">Privacy Policy</a>
             <a href="#" class="footer-link">Terms of Use</a>
@@ -312,6 +316,39 @@ const handleLogout = () => {
   margin: 0;
 }
 
+.sponsor-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.sponsor-badge span {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.sponsor-name {
+  font-weight: 600;
+  font-size: 0.9rem !important;
+  opacity: 1 !important;
+  background: linear-gradient(135deg, #ffffff, #f0f0f0);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+}
+
+.sponsor-name:hover {
+  opacity: 0.9 !important;
+  text-decoration: none;
+}
+
 .footer-links {
   display: flex;
   gap: var(--space-md);
@@ -377,6 +414,11 @@ const handleLogout = () => {
     flex-direction: column;
     gap: var(--space-md);
     text-align: center;
+  }
+  
+  .sponsor-badge {
+    margin: var(--space-sm) 0;
+    order: -1;
   }
 }
 

@@ -12,12 +12,26 @@
           {{ clearing ? 'Clearing...' : 'Clear Bracket' }}
         </button>
       </div>
-      <p class="hint">Generate will create a new bracket based on team rankings. Clear will remove all matches.</p>
+      <div class="hints">
+        <p class="hint">Generate will create a new bracket based on team rankings and automatically create bracket games in the schedule.</p>
+        <p class="hint">Teams will be seeded based on their win percentage, and byes will be assigned to top-seeded teams if needed.</p>
+        <p class="hint"><strong>Byes:</strong> Teams with byes in the first round will advance to the second round to play against winners of first-round games.</p>
+        <p class="hint"><strong>Note:</strong> Clearing the bracket will remove all bracket games from the schedule.</p>
+      </div>
     </div>
     
     <BracketDisplay :bracketData="bracketData" @update-score="handleUpdateScore" ref="bracketDisplayRef" />
     <p v-if="loading">Loading bracket...</p>
     <p v-if="error" class="error-message">{{ error }}</p>
+    
+    <!-- Information about bracket games and schedule -->
+    <div class="bracket-info" v-if="bracketData && bracketData.rounds && Object.keys(bracketData.rounds).length > 0">
+      <h3>Bracket Games</h3>
+      <p>When you update scores in the bracket, the corresponding games in the schedule are also updated.</p>
+      <p>As teams advance in the bracket, new games are automatically created in the schedule.</p>
+      <p>Teams with byes automatically advance to the next round where they'll face winners of first-round games.</p>
+      <p><router-link to="/schedule" class="schedule-link">View the schedule</router-link> to see all bracket games.</p>
+    </div>
   </div>
 </template>
 
@@ -122,6 +136,11 @@ h1 {
   margin-bottom: 0.5rem;
 }
 
+.hints {
+  text-align: center;
+  max-width: 800px;
+}
+
 .btn {
   border: none;
   padding: 0.5rem 1rem;
@@ -154,14 +173,45 @@ h1 {
 }
 
 .hint {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: #666;
-  margin: 0;
+  margin: 0.3rem 0;
 }
 
 .error-message {
   text-align: center;
   color: red;
   margin-top: 15px;
+}
+
+.bracket-info {
+  margin-top: 2rem;
+  padding: 1rem;
+  background-color: #e6f7ff;
+  border-left: 4px solid #1890ff;
+  border-radius: 4px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.bracket-info h3 {
+  margin-top: 0;
+  color: #1890ff;
+}
+
+.bracket-info p {
+  margin: 0.5rem 0;
+  color: #444;
+}
+
+.schedule-link {
+  color: #1890ff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.schedule-link:hover {
+  text-decoration: underline;
 }
 </style> 

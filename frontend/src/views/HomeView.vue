@@ -81,6 +81,30 @@
         </div>
       </section>
       
+      <!-- Tournament Bracket Section -->
+      <section class="bracket-section">
+        <div class="section-header">
+          <h2>Tournament Bracket</h2>
+        </div>
+        
+        <div v-if="bracketLoading" class="loading-state">
+          <div class="loading-spinner"></div>
+          <p>Loading tournament bracket...</p>
+        </div>
+        
+        <div v-else-if="bracketError" class="error-state">
+          <p>{{ bracketError }}</p>
+        </div>
+        
+        <div v-else-if="!bracketData || !bracketData.rounds || Object.keys(bracketData.rounds).length === 0" class="empty-state">
+          <p>Tournament bracket has not been generated yet.</p>
+        </div>
+        
+        <div v-else class="bracket-container">
+          <ReadOnlyBracketDisplay :bracketData="bracketData" />
+        </div>
+      </section>
+      
       <section class="rankings-section">
         <div class="section-header">
           <h2>Current Rankings</h2>
@@ -139,6 +163,7 @@
 import { ref, onMounted, computed } from 'vue';
 import api from '../services/api';
 import ScheduleTable from '../components/ScheduleTable.vue';
+import ReadOnlyBracketDisplay from '../components/ReadOnlyBracketDisplay.vue';
 
 // Tournament settings
 const tournamentName = ref('Tournament');
@@ -152,6 +177,11 @@ const scheduleError = ref(null);
 const rankings = ref([]);
 const rankingsLoading = ref(true);
 const rankingsError = ref(null);
+
+// Bracket data
+const bracketData = ref(null);
+const bracketLoading = ref(true);
+const bracketError = ref(null);
 
 // Computed property to filter played games
 const playedGames = computed(() => {
@@ -168,7 +198,7 @@ const fetchSettings = async () => {
     const response = await api.getSettings();
     tournamentName.value = response.data.name;
     // Update the document title
-    document.title = `${tournamentName.value} - Tournament App`;
+    document.title = `${tournamentName.value} - Launchpad`;
   } catch (err) {
     console.error('Error loading tournament settings:', err);
     // Fallback to default name if settings can't be loaded
@@ -227,10 +257,25 @@ const fetchRankings = async () => {
   }
 };
 
+// Fetch bracket data
+const fetchBracket = async () => {
+  bracketLoading.value = true;
+  try {
+    const response = await api.getBracket();
+    bracketData.value = response.data;
+  } catch (err) {
+    bracketError.value = 'Error loading bracket data';
+    console.error(err);
+  } finally {
+    bracketLoading.value = false;
+  }
+};
+
 onMounted(() => {
   fetchSettings();
   fetchSchedule();
   fetchRankings();
+  fetchBracket();
 });
 </script>
 
@@ -294,6 +339,19 @@ onMounted(() => {
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   box-shadow: var(--shadow-md);
+}
+
+.bracket-section {
+  background-color: var(--color-background-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--space-xl);
+}
+
+.bracket-section .bracket-container {
+  padding: 0;
+  background-color: transparent;
 }
 
 .loading-state, .error-state, .empty-state {

@@ -23,7 +23,8 @@ const newGame = ref({
   date: '',
   time: '',
   field: '',
-  status: 'Scheduled'
+  status: 'Scheduled',
+  game_type: 'Pool Play' // Default to Pool Play
 });
 
 // Flatpickr options
@@ -39,6 +40,12 @@ const flatpickrOptions = {
 
 // Form validation errors
 const errors = ref({});
+
+// Game type options
+const gameTypeOptions = [
+  { value: 'Pool Play', label: 'Pool Play' },
+  { value: 'Bracket', label: 'Bracket' }
+];
 
 // Load teams and schedule data
 const loadData = async () => {
@@ -110,7 +117,8 @@ const resetForm = () => {
     date: '',
     time: '',
     field: '',
-    status: 'Scheduled'
+    status: 'Scheduled',
+    game_type: 'Pool Play'
   };
   errors.value = {};
   showForm.value = false;
@@ -119,6 +127,13 @@ const resetForm = () => {
 // Delete a game from the schedule
 const handleDeleteGame = async (gameId) => {
   try {
+    // Find the game to check if it's a bracket game
+    const gameToDelete = schedule.value.find(game => game.id === gameId);
+    if (gameToDelete && gameToDelete.game_type === 'Bracket') {
+      showNotification('Cannot delete bracket games directly. Use the Bracket Management page instead.', 'error');
+      return;
+    }
+    
     await api.deleteScheduledGame(gameId);
     showNotification('Game removed from schedule', 'success');
     loadData(); // Refresh data
@@ -254,6 +269,24 @@ onMounted(loadData);
                 </div>
               </div>
             </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="game_type">Game Type</label>
+                <select id="game_type" v-model="newGame.game_type">
+                  <option 
+                    v-for="option in gameTypeOptions" 
+                    :key="option.value" 
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+                <small class="help-text">
+                  Note: Bracket games are typically created automatically when generating a bracket.
+                </small>
+              </div>
+            </div>
           </div>
           
           <div class="form-actions">
@@ -282,6 +315,9 @@ onMounted(loadData);
     <div v-else class="schedule-container">
       <div class="card">
         <h2 class="card-title">Current Schedule</h2>
+        <div class="schedule-note">
+          <p><strong>Note:</strong> Bracket games are managed through the <router-link to="/bracket">Bracket Management</router-link> page and cannot be deleted directly from here.</p>
+        </div>
         <ScheduleTable 
           :games="schedule" 
           @delete-game="handleDeleteGame"
@@ -357,6 +393,13 @@ onMounted(loadData);
 
 .error-message {
   color: var(--color-danger);
+  font-size: 0.875rem;
+  margin-top: var(--space-xs);
+}
+
+.help-text {
+  display: block;
+  color: var(--color-text-light);
   font-size: 0.875rem;
   margin-top: var(--space-xs);
 }
@@ -443,6 +486,30 @@ onMounted(loadData);
 /* Schedule container */
 .schedule-container {
   margin-top: var(--space-xl);
+}
+
+.schedule-note {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-left: 4px solid var(--color-info);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+  border-radius: var(--radius-sm);
+}
+
+.schedule-note p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.schedule-note a {
+  color: var(--color-info);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.schedule-note a:hover {
+  text-decoration: underline;
 }
 
 /* Responsive adjustments */

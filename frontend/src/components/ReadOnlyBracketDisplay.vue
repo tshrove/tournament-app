@@ -1,6 +1,5 @@
 <template>
   <div class="bracket-container">
-    <h2>Tournament Bracket</h2>
     <div class="bracket-rounds" v-if="bracketData && bracketData.rounds && Object.keys(bracketData.rounds).length > 0">
        <div v-for="(roundMatches, roundNumber) in bracketData.rounds" :key="roundNumber" class="round">
            <h4>Round {{ roundNumber }}</h4>
@@ -37,14 +36,9 @@
                             <p>Team advances to next round automatically</p>
                         </div>
                         
-                        <!-- Score Input -->
-                        <div v-if="match.status === 'Scheduled' && match.team1 && match.team2" class="score-input-section">
-                            <input type="number" min="0" placeholder="S1" v-model.number="scores[match.matchId].team1_score" @input="clearError(match.matchId)">
-                            <input type="number" min="0" placeholder="S2" v-model.number="scores[match.matchId].team2_score" @input="clearError(match.matchId)">
-                            <button @click="submitScore(match.matchId)" :disabled="isSubmitting[match.matchId]">
-                                {{ isSubmitting[match.matchId] ? '...' : 'Save' }}
-                            </button>
-                            <p v-if="submitErrors[match.matchId]" class="submit-error">{{ submitErrors[match.matchId] }}</p>
+                        <!-- Match Status Indicator -->
+                        <div v-if="match.status === 'Scheduled'" class="match-status scheduled">
+                            <p>Game scheduled</p>
                         </div>
                         
                         <!-- Winner Display -->
@@ -56,83 +50,26 @@
            </ul>
        </div>
     </div>
-    <p v-else>Bracket data is not available or is empty.</p>
+    <p v-else>Tournament bracket is not available yet.</p>
   </div>
 </template>
 
 <script setup>
-import { ref, defineProps, watch, defineEmits } from 'vue';
+import { defineProps } from 'vue';
 
-const props = defineProps({
+defineProps({
   bracketData: {
     type: Object, // Expecting { rounds: { '1': [...], '2': [...] } }
     required: true,
     default: () => ({ rounds: {} })
   }
 });
-
-const emit = defineEmits(['updateScore']);
-
-const scores = ref({});
-const isSubmitting = ref({});
-const submitErrors = ref({});
-
-watch(() => props.bracketData, (newBracketData) => {
-  if (newBracketData && newBracketData.rounds) {
-    Object.values(newBracketData.rounds).flat().forEach(match => {
-      if (!scores.value[match.matchId]) {
-        scores.value[match.matchId] = { team1_score: null, team2_score: null };
-        isSubmitting.value[match.matchId] = false;
-        submitErrors.value[match.matchId] = null;
-      }
-      if (match.status === 'Complete') {
-          scores.value[match.matchId].team1_score = match.team1_score;
-          scores.value[match.matchId].team2_score = match.team2_score;
-      }
-    });
-  }
-}, { immediate: true, deep: true });
-
-const submitScore = (matchId) => {
-  const scoreData = scores.value[matchId];
-  if (scoreData.team1_score === null || scoreData.team1_score < 0 || scoreData.team2_score === null || scoreData.team2_score < 0) {
-    submitErrors.value[matchId] = 'Valid scores required.';
-    return;
-  }
-  isSubmitting.value[matchId] = true;
-  submitErrors.value[matchId] = null;
-  emit('updateScore', matchId, scoreData);
-};
-
-const clearError = (matchId) => {
-    if (submitErrors.value[matchId]) {
-        submitErrors.value[matchId] = null;
-    }
-}
-
-const resetSubmittingState = (matchId) => {
-  if (isSubmitting.value[matchId]) {
-      isSubmitting.value[matchId] = false;
-  }
-};
-
-const setSubmitError = (matchId, errorMsg) => {
-    submitErrors.value[matchId] = errorMsg;
-}
-
-defineExpose({ resetSubmittingState, setSubmitError });
-
 </script>
 
 <style scoped>
 .bracket-container {
   padding: 20px;
   background-color: #f4f4f4; /* Light background for the whole area */
-}
-
-h2 {
-    text-align: center;
-    margin-bottom: 20px;
 }
 
 .bracket-rounds {
@@ -254,6 +191,25 @@ ul {
   text-align: center;
 }
 
+/* Match status indicator */
+.match-status {
+  padding: 5px 8px;
+  border-radius: 4px;
+  margin-top: 5px;
+  text-align: center;
+}
+
+.match-status.scheduled {
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.match-status p {
+  margin: 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: #ff9800;
+}
+
 /* Bye status styling */
 .match.bye .match-info {
     color: #666;
@@ -275,36 +231,33 @@ ul {
      border-left: 4px solid #FFC107; /* Amber indicator */
 }
 
-.score-input-section {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 5px;
+.winner-display { 
+  font-weight: bold; 
+  color: #388E3C; 
+  font-size: 0.85em; 
+  margin-top: 5px; 
+  text-align: center; 
 }
-
-.score-input-section input[type="number"] {
-  width: 45px;
-  padding: 4px;
-  text-align: center;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  font-size: 0.9em;
-}
-
-.score-input-section button {
-  padding: 4px 8px;
-  font-size: 0.8em;
-  background-color: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer;
-}
-.score-input-section button:disabled { background-color: #aaa; cursor: not-allowed; }
-.score-input-section button:hover:not(:disabled) { background-color: #1976D2; }
-
-.winner-display { font-weight: bold; color: #388E3C; font-size: 0.85em; margin-top: 5px; text-align: center; }
-.submit-error { color: red; font-size: 0.8em; margin-top: 4px; text-align: left; width: 100%; }
 
 p {
   text-align: center;
   color: #777;
   margin-top: 15px;
+}
+
+/* Responsive styles for better mobile display */
+@media (max-width: 768px) {
+  .bracket-rounds {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .round {
+    min-width: auto;
+  }
+  
+  .match-info {
+    font-size: 0.8em;
+  }
 }
 </style> 

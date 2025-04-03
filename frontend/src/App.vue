@@ -48,7 +48,7 @@ const handleLogout = () => {
     <header class="app-header">
       <div class="container header-container">
         <div class="logo">
-          <h1>⚾ Tournament App</h1>
+          <h1>🚀 Launchpad</h1>
         </div>
         
         <!-- Mobile menu toggle -->
@@ -83,7 +83,7 @@ const handleLogout = () => {
     <footer class="app-footer">
       <div class="container">
         <div class="footer-content">
-          <p>&copy; {{ new Date().getFullYear() }} Tournament App</p>
+          <p>&copy; {{ new Date().getFullYear() }} Launchpad</p>
           <div class="footer-links">
             <a href="#" class="footer-link">Privacy Policy</a>
             <a href="#" class="footer-link">Terms of Use</a>

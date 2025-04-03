@@ -36,6 +36,8 @@ class Game(db.Model):
     time = db.Column(db.Time, nullable=False)
     field = db.Column(db.String(100), nullable=False)
     status = db.Column(db.String(20), default='Scheduled')  # Scheduled, Completed, Cancelled
+    game_type = db.Column(db.String(20), default='Pool Play')  # Pool Play, Bracket
+    bracket_match_id = db.Column(db.Integer, nullable=True)  # Reference to a bracket match if this is a bracket game
     
     # Relationships
     team1 = db.relationship('Team', foreign_keys=[team1_id], backref=db.backref('home_games', lazy=True))
@@ -56,7 +58,9 @@ class Game(db.Model):
             'date': self.date.isoformat() if self.date else None,
             'time': self.time.isoformat() if self.time else None,
             'field': self.field,
-            'status': self.status
+            'status': self.status,
+            'game_type': self.game_type,
+            'bracket_match_id': self.bracket_match_id
         }
 
 class Bracket(db.Model):
@@ -81,6 +85,8 @@ class BracketMatch(db.Model):
     team2_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=True)
     team1_score = db.Column(db.Integer, nullable=True)
     team2_score = db.Column(db.Integer, nullable=True)
+    team1_seed = db.Column(db.Integer, nullable=True)
+    team2_seed = db.Column(db.Integer, nullable=True)
     winner_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=True)
     status = db.Column(db.String(20), default='Scheduled')
     
@@ -96,6 +102,8 @@ class BracketMatch(db.Model):
             'team2_id': self.team2_id,
             'team1_score': self.team1_score,
             'team2_score': self.team2_score,
+            'team1_seed': self.team1_seed,
+            'team2_seed': self.team2_seed,
             'winner_id': self.winner_id,
             'status': self.status
         }

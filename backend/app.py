@@ -3,6 +3,7 @@ from flask_cors import CORS
 from database import db
 from models import Team, Game, Bracket, BracketMatch, TournamentSettings
 from datetime import datetime
+import math
 
 def create_app():
     app = Flask(__name__)
@@ -45,7 +46,7 @@ def handle_preflight():
 # Basic route
 @app.route('/')
 def index():
-    return jsonify({"message": "Welcome to the Tournament App API!"})
+    return jsonify({"message": "Welcome to the Launchpad API!"})
 
 # Team routes
 @app.route('/api/teams', methods=['GET'])
@@ -173,11 +174,23 @@ def get_bracket():
             team2 = Team.query.get(match.team2_id) if match.team2_id else None
             winner = Team.query.get(match.winner_id) if match.winner_id else None
             
+            # Create team objects with seed info
+            team1_data = None
+            team2_data = None
+            
+            if team1:
+                team1_data = team1.to_dict()
+                team1_data['seed'] = match.team1_seed
+                
+            if team2:
+                team2_data = team2.to_dict()
+                team2_data['seed'] = match.team2_seed
+            
             match_data = {
                 'matchId': match.match_display_id,
                 'round': match.round_number,
-                'team1': team1.to_dict() if team1 else None,
-                'team2': team2.to_dict() if team2 else None,
+                'team1': team1_data,
+                'team2': team2_data,
                 'team1_score': match.team1_score,
                 'team2_score': match.team2_score,
                 'winner': winner.to_dict() if winner else None,
@@ -191,10 +204,14 @@ def get_bracket():
 
 @app.route('/bracket/generate', methods=['POST'])
 def generate_bracket():
-    """Generate a new tournament bracket"""
+    """Generate a new tournament bracket with proper seeding for a 6-team format"""
     try:
         # Clear existing bracket data
         BracketMatch.query.delete()
+        
+        # Delete any existing bracket games
+        Game.query.filter_by(game_type='Bracket').delete()
+        
         db.session.commit()
         
         # Fetch teams ranked by win percentage
@@ -220,72 +237,130 @@ def generate_bracket():
         )
         
         # Check if we have enough teams
-        if len(seeded_teams) < 2:
-            return jsonify({"error": "Not enough teams to create a bracket. Add at least 2 teams."}), 400
-            
-        # Determine number of rounds needed based on team count
-        team_count = len(seeded_teams)
-        total_slots = 1
-        round_count = 0
+        if len(seeded_teams) < 6:
+            return jsonify({"error": "Not enough teams to create a 6-team bracket. Add at least 6 teams."}), 400
         
-        while total_slots < team_count:
-            total_slots *= 2
-            round_count += 1
-            
-        # If we need more teams to fill bracket, add byes
-        while len(seeded_teams) < total_slots:
-            seeded_teams.append(None)
-            
-        # Create first round matches
+        # Limit to 6 teams
+        seeded_teams = seeded_teams[:6]
+        
+        # Create bracket matches
         match_id = 1
-        first_round_matches = []
+        current_date = datetime.now().date()  # Default date for bracket games
         
-        for i in range(0, len(seeded_teams), 2):
-            team1 = seeded_teams[i]
-            team2 = seeded_teams[i+1] if i+1 < len(seeded_teams) else None
-            
-            # Determine match status
-            if team1 is None or team2 is None:
-                status = 'Bye'
-                winner_id = team1.id if team1 else (team2.id if team2 else None)
-            else:
-                status = 'Scheduled'
-                winner_id = None
-                
-            match = BracketMatch(
-                match_display_id=match_id,
-                round_number=1,
-                team1_id=team1.id if team1 else None,
-                team2_id=team2.id if team2 else None,
-                team1_score=None,
-                team2_score=None,
-                winner_id=winner_id,
-                status=status
-            )
-            
-            db.session.add(match)
-            first_round_matches.append(match)
-            match_id += 1
-            
-        # Create subsequent rounds with empty matches
-        for round_num in range(2, round_count + 1):
-            matches_in_round = total_slots // (2 ** round_num)
-            
-            for i in range(matches_in_round):
-                match = BracketMatch(
-                    match_display_id=match_id,
-                    round_number=round_num,
-                    team1_id=None,
-                    team2_id=None,
-                    team1_score=None,
-                    team2_score=None,
-                    winner_id=None,
-                    status='Pending'
-                )
-                
-                db.session.add(match)
-                match_id += 1
-                
+        # Create Round 1: (3 vs 6) and (4 vs 5)
+        # Match 1: Seed 3 vs Seed 6
+        match1 = BracketMatch(
+            match_display_id=match_id,
+            round_number=1,
+            team1_id=seeded_teams[2].id,  # Seed 3
+            team2_id=seeded_teams[5].id,  # Seed 6
+            team1_score=None,
+            team2_score=None,
+            team1_seed=3,
+            team2_seed=6,
+            winner_id=None,
+            status='Scheduled'
+        )
+        
+        db.session.add(match1)
+        
+        # Create a corresponding game in the schedule
+        game1 = Game(
+            team1_id=seeded_teams[2].id,
+            team2_id=seeded_teams[5].id,
+            date=current_date,
+            time=datetime.strptime('12:00', '%H:%M').time(),
+            field='Bracket Field',
+            status='Scheduled',
+            game_type='Bracket',
+            bracket_match_id=match_id
+        )
+        db.session.add(game1)
+        
+        match_id += 1
+        
+        # Match 2: Seed 4 vs Seed 5
+        match2 = BracketMatch(
+            match_display_id=match_id,
+            round_number=1,
+            team1_id=seeded_teams[3].id,  # Seed 4
+            team2_id=seeded_teams[4].id,  # Seed 5
+            team1_score=None,
+            team2_score=None,
+            team1_seed=4,
+            team2_seed=5,
+            winner_id=None,
+            status='Scheduled'
+        )
+        
+        db.session.add(match2)
+        
+        # Create a corresponding game in the schedule
+        game2 = Game(
+            team1_id=seeded_teams[3].id,
+            team2_id=seeded_teams[4].id,
+            date=current_date,
+            time=datetime.strptime('14:00', '%H:%M').time(),
+            field='Bracket Field',
+            status='Scheduled',
+            game_type='Bracket',
+            bracket_match_id=match_id
+        )
+        db.session.add(game2)
+        
+        match_id += 1
+        
+        # Create Round 2: (Winner of 3 vs 6 plays 1) and (Winner of 4 vs 5 plays 2)
+        # Match 3: Seed 1 vs Winner of Match 1
+        match3 = BracketMatch(
+            match_display_id=match_id,
+            round_number=2,
+            team1_id=seeded_teams[0].id,  # Seed 1
+            team2_id=None,  # Will be filled with winner of Match 1
+            team1_score=None,
+            team2_score=None,
+            team1_seed=1,
+            team2_seed=None,  # Will be filled later
+            winner_id=None,
+            status='Pending'
+        )
+        
+        db.session.add(match3)
+        match_id += 1
+        
+        # Match 4: Seed 2 vs Winner of Match 2
+        match4 = BracketMatch(
+            match_display_id=match_id,
+            round_number=2,
+            team1_id=seeded_teams[1].id,  # Seed 2
+            team2_id=None,  # Will be filled with winner of Match 2
+            team1_score=None,
+            team2_score=None,
+            team1_seed=2,
+            team2_seed=None,  # Will be filled later
+            winner_id=None,
+            status='Pending'
+        )
+        
+        db.session.add(match4)
+        match_id += 1
+        
+        # Create Round 3: Championship match between winners of Round 2
+        match5 = BracketMatch(
+            match_display_id=match_id,
+            round_number=3,
+            team1_id=None,  # Will be filled with winner of Match 3
+            team2_id=None,  # Will be filled with winner of Match 4
+            team1_score=None,
+            team2_score=None,
+            team1_seed=None,  # Will be filled later
+            team2_seed=None,  # Will be filled later
+            winner_id=None,
+            status='Pending'
+        )
+        
+        db.session.add(match5)
+        
         db.session.commit()
         
         # Return the generated bracket
@@ -300,6 +375,10 @@ def clear_bracket():
     try:
         # Delete all bracket matches
         BracketMatch.query.delete()
+        
+        # Also delete all bracket games from the schedule
+        Game.query.filter_by(game_type='Bracket').delete()
+        
         db.session.commit()
         return jsonify({"message": "Tournament bracket cleared successfully", "rounds": {}})
     except Exception as e:
@@ -308,7 +387,7 @@ def clear_bracket():
 
 @app.route('/bracket/match/<int:match_id>', methods=['PATCH'])
 def update_bracket_match(match_id):
-    """Update a bracket match score and advance winner"""
+    """Update a bracket match score and advance winner according to the 6-team bracket format"""
     try:
         data = request.get_json()
         
@@ -339,34 +418,80 @@ def update_bracket_match(match_id):
         # Determine the winner
         if team1_score > team2_score:
             match.winner_id = match.team1_id
+            winner_seed = match.team1_seed
         elif team2_score > team1_score:
             match.winner_id = match.team2_id
+            winner_seed = match.team2_seed
         else:
             return jsonify({"error": "There must be a winner in bracket play"}), 400
+        
+        # Update the corresponding game in the schedule
+        game = Game.query.filter_by(bracket_match_id=match_id).first()
+        if game:
+            game.team1_score = team1_score
+            game.team2_score = team2_score
+            game.status = 'Completed'
             
-        # Advance the winner to the next round
-        next_round = match.round_number + 1
+        # Advance the winner to the next round based on our 6-team format
+        next_match = None
+        next_match_position = None
         
-        # Calculate which match in the next round this feeds into
-        next_match_index = (match.match_display_id - (2**(match.round_number-1))) // 2 + 1
-        next_match_position = (match.match_display_id - (2**(match.round_number-1))) % 2
+        # For the custom 6-team bracket:
+        # Match 1 (3 vs 6) winner goes to Match 3 as team2 to play seed 1
+        # Match 2 (4 vs 5) winner goes to Match 4 as team2 to play seed 2
+        # Match 3 winner goes to Match 5 as team1
+        # Match 4 winner goes to Match 5 as team2
         
-        # Find the next round match
-        next_match = BracketMatch.query.filter_by(
-            round_number=next_round,
-            match_display_id=next_match_index + (2**(next_round-1) - 1)
-        ).first()
+        if match.round_number == 1:
+            if match.match_display_id == 1:  # Match 1 (3 vs 6)
+                next_match = BracketMatch.query.filter_by(match_display_id=3).first()  # Match 3
+                next_match_position = 1  # Team 2 position
+            elif match.match_display_id == 2:  # Match 2 (4 vs 5)
+                next_match = BracketMatch.query.filter_by(match_display_id=4).first()  # Match 4
+                next_match_position = 1  # Team 2 position
+        elif match.round_number == 2:
+            if match.match_display_id == 3:  # Match 3 (1 vs winner of 3/6)
+                next_match = BracketMatch.query.filter_by(match_display_id=5).first()  # Match 5
+                next_match_position = 0  # Team 1 position
+            elif match.match_display_id == 4:  # Match 4 (2 vs winner of 4/5)
+                next_match = BracketMatch.query.filter_by(match_display_id=5).first()  # Match 5
+                next_match_position = 1  # Team 2 position
         
         # If there is a next match, advance the winner
         if next_match:
+            winner_team = Team.query.get(match.winner_id)
+            
             if next_match_position == 0:  # Team 1 position
                 next_match.team1_id = match.winner_id
+                next_match.team1_seed = winner_seed
             else:  # Team 2 position
                 next_match.team2_id = match.winner_id
+                next_match.team2_seed = winner_seed
                 
-            # If both teams are assigned, update status
+            # If both teams are assigned, update status and create game
             if next_match.team1_id is not None and next_match.team2_id is not None:
                 next_match.status = 'Scheduled'
+                
+                # Create a game in the schedule for the next match
+                existing_game = Game.query.filter_by(bracket_match_id=next_match.match_display_id).first()
+                
+                if not existing_game:
+                    # Get the team objects for the game
+                    team1 = Team.query.get(next_match.team1_id)
+                    team2 = Team.query.get(next_match.team2_id)
+                    
+                    if team1 and team2:
+                        game = Game(
+                            team1_id=next_match.team1_id,
+                            team2_id=next_match.team2_id,
+                            date=datetime.now().date(),
+                            time=datetime.strptime('12:00', '%H:%M').time(),  # Default time
+                            field='Bracket Field',
+                            status='Scheduled',
+                            game_type='Bracket',
+                            bracket_match_id=next_match.match_display_id
+                        )
+                        db.session.add(game)
         
         db.session.commit()
         return jsonify({"message": "Match updated successfully"})

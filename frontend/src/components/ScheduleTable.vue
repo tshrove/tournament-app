@@ -1,5 +1,5 @@
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { defineProps, defineEmits, ref, computed } from 'vue';
 
 const props = defineProps({
   games: {
@@ -17,6 +17,17 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['delete-game']);
+
+// Game type filter
+const gameTypeFilter = ref('all');
+
+// Filtered games based on game type selection
+const filteredGames = computed(() => {
+  if (gameTypeFilter.value === 'all') {
+    return props.games;
+  }
+  return props.games.filter(game => game.game_type === gameTypeFilter.value);
+});
 
 // Format date for display
 const formatDate = (dateString) => {
@@ -55,6 +66,35 @@ const getGameOutcome = (game) => {
 </script>
 
 <template>
+  <div class="schedule-controls">
+    <div class="filter-controls">
+      <span class="filter-label">Filter:</span>
+      <div class="filter-options">
+        <button 
+          @click="gameTypeFilter = 'all'" 
+          :class="{ active: gameTypeFilter === 'all' }"
+          class="filter-btn"
+        >
+          All Games
+        </button>
+        <button 
+          @click="gameTypeFilter = 'Pool Play'" 
+          :class="{ active: gameTypeFilter === 'Pool Play' }"
+          class="filter-btn"
+        >
+          Pool Play
+        </button>
+        <button 
+          @click="gameTypeFilter = 'Bracket'" 
+          :class="{ active: gameTypeFilter === 'Bracket' }"
+          class="filter-btn"
+        >
+          Bracket
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="schedule-table-container">
     <table class="schedule-table">
       <thead>
@@ -64,15 +104,19 @@ const getGameOutcome = (game) => {
           <th>Teams</th>
           <th v-if="showScores">Score</th>
           <th>Field</th>
+          <th>Type</th>
           <th>Status</th>
           <th v-if="allowDelete">Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr 
-          v-for="game in games" 
+          v-for="game in filteredGames" 
           :key="game.id" 
-          :class="{ completed: game.status === 'Completed' }"
+          :class="{ 
+            completed: game.status === 'Completed', 
+            'bracket-game': game.game_type === 'Bracket' 
+          }"
         >
           <td>{{ formatDate(game.date) }}</td>
           <td>{{ formatTime(game.time) }}</td>
@@ -121,6 +165,11 @@ const getGameOutcome = (game) => {
           </td>
           <td>{{ game.field }}</td>
           <td>
+            <span class="game-type-badge" :class="game.game_type.toLowerCase().replace(' ', '-')">
+              {{ game.game_type }}
+            </span>
+          </td>
+          <td>
             <span class="status-badge" :class="game.status.toLowerCase()">
               {{ game.status }}
             </span>
@@ -130,6 +179,7 @@ const getGameOutcome = (game) => {
               @click="handleDelete(game.id)" 
               class="btn-delete" 
               title="Remove game"
+              :disabled="game.game_type === 'Bracket'"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M2 4H3.33333H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -139,12 +189,60 @@ const getGameOutcome = (game) => {
             </button>
           </td>
         </tr>
+        <tr v-if="filteredGames.length === 0">
+          <td colspan="8" class="empty-message">
+            No games found for the selected filter.
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
 </template>
 
 <style scoped>
+.schedule-controls {
+  margin-bottom: var(--space-md);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.filter-label {
+  font-weight: 500;
+  color: var(--color-text-light);
+}
+
+.filter-options {
+  display: flex;
+  gap: 5px;
+}
+
+.filter-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all var(--transition-fast);
+  color: var(--color-text-light);
+}
+
+.filter-btn:hover {
+  background-color: var(--color-background-dark);
+}
+
+.filter-btn.active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
 .schedule-table-container {
   overflow-x: auto;
   margin: var(--space-md) 0;
@@ -276,6 +374,26 @@ const getGameOutcome = (game) => {
   letter-spacing: 0.5px;
 }
 
+.game-type-badge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.game-type-badge.pool-play {
+  background-color: rgba(147, 51, 234, 0.1);
+  color: #8033cc;
+}
+
+.game-type-badge.bracket {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
 .status-badge.scheduled {
   background-color: rgba(59, 130, 246, 0.1);
   color: var(--color-info);
@@ -316,9 +434,16 @@ const getGameOutcome = (game) => {
   transition: all var(--transition-fast);
 }
 
-.btn-delete:hover {
+.btn-delete:hover:not(:disabled) {
   background-color: var(--color-danger);
   color: white;
+}
+
+.btn-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: rgba(156, 163, 175, 0.1);
+  color: var(--color-text-light);
 }
 
 .btn-delete svg {
@@ -330,6 +455,21 @@ tr.completed {
   background-color: rgba(243, 244, 246, 0.3);
 }
 
+tr.bracket-game {
+  background-color: rgba(255, 237, 213, 0.3);
+}
+
+tr.bracket-game:hover {
+  background-color: rgba(255, 237, 213, 0.5);
+}
+
+.empty-message {
+  text-align: center;
+  padding: var(--space-lg);
+  color: var(--color-text-light);
+  font-style: italic;
+}
+
 @media (max-width: 768px) {
   .schedule-table th,
   .schedule-table td {
@@ -339,6 +479,15 @@ tr.completed {
   
   .btn-delete span {
     display: none;
+  }
+  
+  .filter-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .filter-options {
+    flex-wrap: wrap;
   }
 }
 </style> 

@@ -118,8 +118,8 @@ const getGameOutcome = (game) => {
             'bracket-game': game.game_type === 'Bracket' 
           }"
         >
-          <td>{{ formatDate(game.date) }}</td>
-          <td>{{ formatTime(game.time) }}</td>
+          <td data-label="Date">{{ formatDate(game.date) }}</td>
+          <td data-label="Time">{{ formatTime(game.time) }}</td>
           <td class="teams-column">
             <div class="matchup">
               <span 
@@ -163,18 +163,18 @@ const getGameOutcome = (game) => {
             </div>
             <span v-else class="no-score">Pending</span>
           </td>
-          <td>{{ game.field }}</td>
-          <td>
+          <td data-label="Field">{{ game.field }}</td>
+          <td data-label="Type">
             <span class="game-type-badge" :class="game.game_type.toLowerCase().replace(' ', '-')">
               {{ game.game_type }}
             </span>
           </td>
-          <td>
+          <td data-label="Status">
             <span class="status-badge" :class="game.status.toLowerCase()">
               {{ game.status }}
             </span>
           </td>
-          <td v-if="allowDelete" class="actions">
+          <td v-if="allowDelete" class="actions" data-label="Actions">
             <button 
               @click="handleDelete(game.id)" 
               class="btn-delete" 
@@ -471,23 +471,139 @@ tr.bracket-game:hover {
 }
 
 @media (max-width: 768px) {
-  .schedule-table th,
-  .schedule-table td {
-    padding: var(--space-sm);
-    font-size: 0.9rem;
-  }
-  
-  .btn-delete span {
-    display: none;
+  .schedule-controls {
+    flex-direction: column;
+    align-items: flex-start;
   }
   
   .filter-controls {
     flex-direction: column;
     align-items: flex-start;
+    width: 100%;
   }
   
   .filter-options {
     flex-wrap: wrap;
+    width: 100%;
+  }
+  
+  .filter-btn {
+    flex: 1;
+    text-align: center;
+    padding: var(--space-sm);
+  }
+  
+  .schedule-table {
+    display: block; /* Convert from table to block for mobile */
+  }
+  
+  .schedule-table thead {
+    display: none; /* Hide table headers on mobile */
+  }
+  
+  .schedule-table tbody {
+    display: block;
+  }
+  
+  .schedule-table tr {
+    display: block;
+    margin-bottom: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-sm);
+  }
+  
+  .schedule-table td {
+    display: block;
+    text-align: right;
+    padding: var(--space-xs) var(--space-sm);
+    position: relative;
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .schedule-table td:last-child {
+    border-bottom: none;
+  }
+  
+  /* Add labels for each cell */
+  .schedule-table td::before {
+    content: attr(data-label);
+    float: left;
+    font-weight: 600;
+    color: var(--color-text-light);
+  }
+  
+  /* Specific styling for cards */
+  .teams-column {
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .teams-column::before {
+    content: "Teams:";
+    float: left;
+    font-weight: 600;
+    color: var(--color-text-light);
+  }
+  
+  .matchup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-left: auto;
+    width: 65%;
+    text-align: left;
+  }
+  
+  .scores-column::before {
+    content: "Score:";
+    float: left;
+    font-weight: 600;
+    color: var(--color-text-light);
+  }
+  
+  .schedule-table td:nth-child(3)::before {
+    content: "Field:";
+  }
+  
+  .schedule-table td:nth-child(4)::before {
+    content: "Type:";
+  }
+  
+  .schedule-table td:nth-child(5)::before {
+    content: "Status:";
+  }
+  
+  .btn-delete {
+    margin-left: auto;
+  }
+  
+  .btn-delete span {
+    display: none;
+  }
+}
+
+/* Additional improvements for very small screens */
+@media (max-width: 480px) {
+  .filter-options {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .filter-btn {
+    width: 100%;
+  }
+  
+  .schedule-table td {
+    font-size: 0.85rem;
+  }
+  
+  .matchup {
+    width: 70%;
+  }
+  
+  .status-badge, .game-type-badge {
+    font-size: 0.7rem;
   }
 }
 </style> 

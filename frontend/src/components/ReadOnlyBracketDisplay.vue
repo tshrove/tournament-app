@@ -78,6 +78,10 @@ defineProps({
   overflow-x: auto; /* Allow horizontal scrolling if needed */
   gap: 40px; /* Space between rounds */
   padding-bottom: 20px; /* Space for scrollbar */
+  /* Add smooth scrolling for iOS */
+  -webkit-overflow-scrolling: touch;
+  /* Add scroll snap for better mobile experience */
+  scroll-snap-type: x mandatory;
 }
 
 .round {
@@ -85,6 +89,8 @@ defineProps({
   flex-direction: column;
   gap: 30px; /* Vertical space between matches in a round */
   min-width: 300px; /* Minimum width for a round */
+  /* Add scroll snap for better mobile experience */
+  scroll-snap-align: start;
 }
 
 .round h4 {
@@ -247,17 +253,60 @@ p {
 
 /* Responsive styles for better mobile display */
 @media (max-width: 768px) {
+  .bracket-container {
+    padding: 10px;
+  }
+  
   .bracket-rounds {
-    flex-direction: column;
-    gap: 20px;
+    gap: 20px; /* Smaller gap between rounds on mobile */
   }
   
   .round {
-    min-width: auto;
+    min-width: 280px; /* Slightly smaller on mobile */
+    gap: 20px; /* Less space between matches */
+  }
+  
+  .match {
+    padding: 8px; /* Smaller padding */
   }
   
   .match-info {
-    font-size: 0.8em;
+    font-size: 0.85em;
+  }
+  
+  .team1, .team2 {
+    max-width: 100px; /* Limit width to prevent overflow */
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Small phone screens */
+@media (max-width: 480px) {
+  .bracket-rounds {
+    gap: 15px;
+  }
+  
+  .round {
+    min-width: 250px;
+    gap: 15px;
+  }
+  
+  .team1, .team2 {
+    max-width: 80px;
+  }
+  
+  .seed-number {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.2rem;
+  }
+  
+  .match-id {
+    font-size: 0.7em;
+  }
+  
+  .vs {
+    font-size: 0.75em;
   }
 }
 </style> 

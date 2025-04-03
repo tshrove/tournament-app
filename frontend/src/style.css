@@ -66,6 +66,7 @@ html {
   color-scheme: light;
   background-color: var(--color-background);
   color: var(--color-text);
+  font-size: 16px;
 }
 
 body {
@@ -75,6 +76,8 @@ body {
   font-family: 'Inter', sans-serif;
   color: var(--color-text);
   background-color: var(--color-background);
+  width: 100%;
+  overflow-x: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -355,6 +358,14 @@ tbody tr:hover {
 }
 
 @media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+  
+  .container {
+    padding: 0 var(--space-md);
+  }
+  
   h1 { font-size: 1.8rem; }
   h2 { font-size: 1.5rem; }
   h3 { font-size: 1.2rem; }
@@ -366,6 +377,37 @@ tbody tr:hover {
   input, select, textarea, .date-picker {
     padding: 0.6rem;
   }
+  
+  button, .btn, a.btn, input[type="submit"] {
+    min-height: 44px;
+    padding: 0.6rem 1rem;
+  }
+  
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 13px;
+  }
+  
+  .container {
+    padding: 0 var(--space-sm);
+  }
+  
+  h1 { font-size: 1.6rem; }
+  h2 { font-size: 1.3rem; }
+  h3 { font-size: 1.1rem; }
 }
 
 /* Animation utilities */

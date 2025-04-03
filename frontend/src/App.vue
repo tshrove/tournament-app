@@ -115,6 +115,8 @@ const handleLogout = () => {
   display: flex;
   flex-direction: column;
   background-color: var(--color-background);
+  overflow-x: hidden; /* Prevent horizontal overflow at the container level */
+  max-width: 100vw; /* Ensure container doesn't exceed viewport width */
 }
 
 /* Header Styling */
@@ -275,6 +277,20 @@ const handleLogout = () => {
 .main-content {
   flex-grow: 1;
   padding: var(--space-xl) 0;
+  width: 100%;
+  overflow-x: hidden; /* Prevent horizontal overflow */
+  box-sizing: border-box; /* Ensure padding is included in width */
+  display: flex;
+  justify-content: center; /* Center content horizontally */
+}
+
+.main-content .container {
+  max-width: 100%; /* Ensure content doesn't exceed container width */
+  margin: 0 auto; /* Center the container */
+  box-sizing: border-box; /* Ensure padding is included in width */
+  padding-left: var(--space-lg);
+  padding-right: var(--space-lg); /* Explicit right padding to match left */
+  width: 100%;
 }
 
 /* Footer Styling */
@@ -351,10 +367,32 @@ const handleLogout = () => {
     padding: var(--space-md) 0;
   }
   
+  .main-content .container {
+    padding-left: var(--space-md);
+    padding-right: var(--space-md); /* Explicit right padding to match left */
+    max-width: 100%;
+  }
+  
   .footer-content {
     flex-direction: column;
     gap: var(--space-md);
     text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: var(--space-sm) 0;
+  }
+  
+  .main-content .container {
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm); /* Explicit right padding to match left */
+  }
+  
+  .footer-links {
+    flex-direction: column;
+    gap: var(--space-sm);
   }
 }
 </style>

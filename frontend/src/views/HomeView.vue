@@ -125,7 +125,8 @@
         </div>
         
         <div v-else class="rankings-container">
-          <table class="rankings-table">
+          <!-- Desktop table view -->
+          <table class="rankings-table desktop-rankings">
             <thead>
               <tr>
                 <th>Rank</th>
@@ -153,6 +154,32 @@
               </tr>
             </tbody>
           </table>
+          
+          <!-- Mobile card view -->
+          <div class="mobile-rankings">
+            <div v-for="team in rankings" :key="team.id" class="ranking-card">
+              <div class="ranking-card-header">
+                <span class="rank-badge">{{ team.rank }}</span>
+                <h3 class="team-name">{{ team.name }}</h3>
+              </div>
+              <div class="ranking-card-content">
+                <div class="ranking-stat">
+                  <span class="stat-label">Record</span>
+                  <span class="stat-value">{{ team.wins }}-{{ team.losses }}</span>
+                </div>
+                <div class="ranking-stat">
+                  <span class="stat-label">Win %</span>
+                  <span class="stat-value">{{ formatPercentage(team.win_percentage) }}</span>
+                </div>
+                <div class="ranking-stat">
+                  <span class="stat-label">Run Diff</span>
+                  <span class="stat-value" :class="{'positive': team.run_differential > 0, 'negative': team.run_differential < 0}">
+                    {{ team.run_differential > 0 ? '+' : '' }}{{ team.run_differential }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
@@ -282,11 +309,17 @@ onMounted(() => {
 <style scoped>
 .home-view {
   width: 100%;
+  overflow-x: hidden; /* Prevent horizontal overflow */
+  max-width: 100%; /* Ensure content doesn't exceed viewport width */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center content horizontally */
 }
 
 .page-header {
   text-align: center;
   margin-bottom: var(--space-xl);
+  width: 100%;
 }
 
 .page-header h1 {
@@ -309,6 +342,9 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-xl);
+  width: 100%;
+  box-sizing: border-box; /* Ensure padding is included in width */
+  max-width: 1200px; /* Limit width on larger screens */
 }
 
 .section-header {
@@ -316,6 +352,7 @@ onMounted(() => {
   align-items: center;
   margin-bottom: var(--space-md);
   gap: var(--space-sm);
+  width: 100%;
 }
 
 .section-header h2 {
@@ -339,6 +376,8 @@ onMounted(() => {
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   box-shadow: var(--shadow-md);
+  width: 100%;
+  box-sizing: border-box; /* Ensure padding is included in width */
 }
 
 .bracket-section {
@@ -347,11 +386,17 @@ onMounted(() => {
   padding: var(--space-lg);
   box-shadow: var(--shadow-md);
   margin-bottom: var(--space-xl);
+  overflow: hidden; /* Contain any potential overflow */
+  width: 100%;
+  box-sizing: border-box; /* Ensure padding is included in width */
 }
 
 .bracket-section .bracket-container {
   padding: 0;
   background-color: transparent;
+  max-width: 100%; /* Ensure it doesn't exceed container width */
+  overflow-x: auto; /* Allow horizontal scrolling within the bracket section */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 .loading-state, .error-state, .empty-state {
@@ -396,6 +441,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--space-md);
+  width: 100%;
 }
 
 .result-card {
@@ -520,6 +566,12 @@ onMounted(() => {
   box-shadow: var(--shadow-sm);
 }
 
+.rankings-container {
+  overflow-x: auto; /* Enable horizontal scrolling for the table container */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  margin: 0 -1px; /* Prevent horizontal scrolling of the page */
+}
+
 .rankings-table th {
   background-color: var(--color-accent);
   color: white;
@@ -574,6 +626,90 @@ onMounted(() => {
   font-weight: 600;
 }
 
+/* Mobile rankings card view */
+.mobile-rankings {
+  display: none; /* Hidden by default, shown on mobile */
+  flex-direction: column;
+  gap: var(--space-md);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ranking-card {
+  background-color: var(--color-background);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.ranking-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--color-primary), var(--color-primary-light));
+}
+
+.ranking-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.rank-badge {
+  background-color: var(--color-accent);
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.ranking-card-header .team-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.ranking-card-content {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+}
+
+.ranking-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+}
+
+.stat-value {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.stat-value.positive {
+  color: var(--color-success);
+}
+
+.stat-value.negative {
+  color: var(--color-danger);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .page-header {
@@ -592,6 +728,10 @@ onMounted(() => {
     font-size: 1.25rem;
   }
   
+  .section-header {
+    flex-wrap: wrap; /* Allow badge to wrap on small screens */
+  }
+  
   .rankings-table th,
   .rankings-table td {
     padding: var(--space-xs) var(--space-sm);
@@ -600,6 +740,102 @@ onMounted(() => {
   
   .results-grid {
     grid-template-columns: 1fr;
+    width: 100%;
+  }
+  
+  .schedule-section, 
+  .rankings-section, 
+  .game-results-section,
+  .bracket-section {
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Improve responsiveness for the ranking table */
+  .rankings-table th:nth-child(5),
+  .rankings-table th:nth-child(6),
+  .rankings-table th:nth-child(7),
+  .rankings-table td:nth-child(5),
+  .rankings-table td:nth-child(6),
+  .rankings-table td:nth-child(7) {
+    display: none; /* Hide less important columns on mobile */
+  }
+  
+  /* Add card-based layout for rankings on smaller screens */
+  .rankings-mobile-card {
+    display: none;
+  }
+  
+  /* Switch from table to cards on mobile */
+  .desktop-rankings {
+    display: none;
+  }
+  
+  .mobile-rankings {
+    display: flex;
+  }
+  
+  .content-container {
+    max-width: 100%; /* Full width on tablets and mobile */
+    padding: 0; /* Remove any potential padding */
+  }
+}
+
+@media (max-width: 480px) {
+  .home-view {
+    padding: 0; /* Remove padding on very small screens */
+    margin: 0; /* Remove margin on very small screens */
+  }
+  
+  .content-container {
+    gap: var(--space-lg); /* Reduce gap between sections */
+  }
+  
+  .schedule-section, 
+  .rankings-section, 
+  .game-results-section,
+  .bracket-section {
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    margin-left: 0;
+    margin-right: 0;
+  }
+  
+  .team-name {
+    font-size: 0.9rem;
+    max-width: 130px; /* Reduce max width on small screens */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .result-card {
+    padding: var(--space-sm);
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .ranking-card {
+    padding: var(--space-sm);
+  }
+  
+  .ranking-card-content {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-xs);
+  }
+  
+  .stat-value {
+    font-size: 0.85rem;
+  }
+  
+  /* Ensure team score stays aligned */
+  .team-score {
+    min-width: 1.5rem;
+    padding: 0.1rem 0.3rem;
   }
 }
 </style> 

@@ -141,6 +141,10 @@ h2 {
   overflow-x: auto; /* Allow horizontal scrolling if needed */
   gap: 40px; /* Space between rounds */
   padding-bottom: 20px; /* Space for scrollbar */
+  /* Add -webkit-overflow-scrolling for smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+  /* Add scroll snap for better mobile scroll experience */
+  scroll-snap-type: x mandatory;
 }
 
 .round {
@@ -148,6 +152,8 @@ h2 {
   flex-direction: column;
   gap: 30px; /* Vertical space between matches in a round */
   min-width: 300px; /* Minimum width for a round */
+  /* Add scroll snap for better mobile experience */
+  scroll-snap-align: start;
 }
 
 .round h4 {
@@ -306,5 +312,64 @@ p {
   text-align: center;
   color: #777;
   margin-top: 15px;
+}
+
+/* Mobile responsiveness improvements */
+@media (max-width: 768px) {
+  .bracket-container {
+    padding: 10px;
+  }
+  
+  .bracket-rounds {
+    gap: 20px; /* Reduce space between rounds */
+  }
+  
+  .round {
+    min-width: 280px; /* Slightly smaller minimum width */
+  }
+  
+  .match {
+    padding: 8px;
+  }
+  
+  .match-info {
+    font-size: 0.85em;
+  }
+  
+  .team1, .team2 {
+    max-width: 100px; /* Limit width to prevent overflow */
+  }
+  
+  .score-input-section {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .score-input-section button {
+    width: 100%;
+    margin-top: 5px;
+    padding: 6px 0; /* Increase touch target */
+  }
+}
+
+/* Small phone screens */
+@media (max-width: 480px) {
+  .bracket-rounds {
+    gap: 15px;
+  }
+  
+  .round {
+    min-width: 250px;
+    gap: 20px;
+  }
+  
+  .team1, .team2 {
+    max-width: 80px;
+  }
+  
+  .seed-number {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.2rem;
+  }
 }
 </style> 

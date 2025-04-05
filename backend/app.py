@@ -154,7 +154,7 @@ def get_rankings():
         return jsonify({"error": str(e)}), 500
 
 # Bracket endpoint
-@app.route('/bracket', methods=['GET'])
+@app.route('/brackets', methods=['GET'])
 def get_bracket():
     try:
         # Get all bracket matches organized by rounds
@@ -204,7 +204,7 @@ def get_bracket():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/bracket/generate', methods=['POST'])
+@app.route('/brackets/generate', methods=['POST'])
 def generate_bracket():
     """Generate a new tournament bracket with proper seeding for a 6-team format"""
     try:
@@ -371,7 +371,7 @@ def generate_bracket():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
-@app.route('/bracket/clear', methods=['POST'])
+@app.route('/brackets/clear', methods=['POST'])
 def clear_bracket():
     """Clear the tournament bracket without generating a new one"""
     try:
@@ -387,7 +387,7 @@ def clear_bracket():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
-@app.route('/bracket/match/<int:match_id>', methods=['PATCH'])
+@app.route('/brackets/match/<int:match_id>', methods=['PATCH'])
 def update_bracket_match(match_id):
     """Update a bracket match score and advance winner according to the 6-team bracket format"""
     try:

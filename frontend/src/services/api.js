@@ -57,16 +57,16 @@ export default {
     return apiClient.get('/api/teams');
   },
   getBracket() {
-    return apiClient.get('/bracket');
+    return apiClient.get('/brackets');
   },
   updateBracketMatch(matchId, scoreData) {
-    return apiClient.patch(`/bracket/match/${matchId}`, scoreData);
+    return apiClient.patch(`/brackets/match/${matchId}`, scoreData);
   },
   generateBracket() {
-    return apiClient.post('/bracket/generate');
+    return apiClient.post('/brackets/generate');
   },
   clearBracket() {
-    return apiClient.post('/bracket/clear');
+    return apiClient.post('/brackets/clear');
   },
   deleteTeam(teamId) {
     return apiClient.delete(`/api/teams/${teamId}`);

@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 // Import view components
 import HomeView from '../views/HomeView.vue'
-import RankingsView from '../views/RankingsView.vue'
 import TeamManagementView from '../views/TeamManagementView.vue'
 import BracketView from '../views/BracketView.vue'
 import ScheduleView from '../views/ScheduleView.vue'
@@ -38,12 +37,6 @@ const routes = [
   },
   
   // Admin functionality routes
-  {
-    path: '/rankings',
-    name: 'Rankings',
-    component: RankingsView,
-    meta: { isAdmin: true }
-  },
   {
     path: '/manage-teams',
     name: 'TeamManagement',

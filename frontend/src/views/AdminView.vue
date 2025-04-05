@@ -50,14 +50,6 @@
                 <p>Manage tournament bracket</p>
               </div>
             </router-link>
-            
-            <router-link to="/rankings" class="admin-nav-link">
-              <div class="icon-container">📊</div>
-              <div class="admin-nav-link-content">
-                <h3>Rankings</h3>
-                <p>View team standings and statistics</p>
-              </div>
-            </router-link>
           </div>
         </div>
       </section>

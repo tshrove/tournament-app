@@ -2,53 +2,60 @@
   <div class="tournaments-view">
     <header class="page-header">
       <div class="header-content">
-        <h1>Baseball Tournaments</h1>
-        <p class="subtitle">Select a tournament to view details</p>
+        <h1>Available Tournaments</h1>
+        <p class="subtitle">Select a tournament to view its dashboard</p>
       </div>
+      <!-- Optional: Add actions like Create Tournament if needed -->
+      <!-- <div class="header-actions"> -->
+      <!--   <button class="btn btn-primary">Create Tournament</button> -->
+      <!-- </div> -->
     </header>
-    
+
     <div class="content-container">
-      <section class="tournaments-section">
+      <!-- Apply .card styling directly -->
+      <section class="card tournaments-section">
         <div class="section-header">
-          <h2>Available Tournaments</h2>
-          <div class="badge" v-if="tournaments.length > 0">{{ tournaments.length }} Tournaments</div>
+          <h2>Tournament List</h2>
+          <div class="badge" v-if="tournaments.length > 0">{{ tournaments.length }} Found</div>
         </div>
-        
+
         <div v-if="loading" class="loading-state">
           <div class="loading-spinner"></div>
           <p>Loading tournaments...</p>
         </div>
-        
+
         <div v-else-if="error" class="error-state">
           <p>{{ error }}</p>
         </div>
-        
+
         <div v-else-if="tournaments.length === 0" class="empty-state">
-          <p>No tournaments available.</p>
+          <p>No tournaments available at this time.</p>
+          <!-- Optional: Add create button here if applicable -->
         </div>
-        
+
         <div v-else class="tournaments-container">
           <div class="tournaments-grid">
-            <div v-for="tournament in tournaments" :key="tournament.id" class="tournament-card" @click="navigateToTournament(tournament.id)">
+            <!-- Use a more descriptive class name -->
+            <div v-for="tournament in tournaments" :key="tournament.id" class="tournament-card-item" @click="navigateToTournament(tournament.id)">
               <div class="tournament-header">
                 <h3>{{ tournament.name }}</h3>
-                <span class="status-pill" :class="tournament.status.toLowerCase()">{{ tournament.status }}</span>
+                <span class="status-pill" :class="getStatusClass(tournament.status)">{{ tournament.status }}</span>
               </div>
               <div class="tournament-details">
-                <p class="tournament-description">{{ tournament.description || 'No description available' }}</p>
+                <p class="tournament-description">{{ tournament.description || 'No description provided.' }}</p>
                 <div class="tournament-metadata">
                   <div v-if="tournament.location" class="metadata-item">
-                    <i class="icon location"></i>
+                    <span class="icon location">📍</span> <!-- Simple icon -->
                     <span>{{ tournament.location }}</span>
                   </div>
                   <div v-if="tournament.start_date" class="metadata-item">
-                    <i class="icon calendar"></i>
-                    <span>{{ formatDate(tournament.start_date) }} {{ tournament.end_date ? `- ${formatDate(tournament.end_date)}` : '' }}</span>
+                    <span class="icon calendar">📅</span> <!-- Simple icon -->
+                    <span>{{ formatDateRange(tournament.start_date, tournament.end_date) }}</span>
                   </div>
                 </div>
               </div>
               <div class="tournament-footer">
-                <button class="btn view-btn">View Tournament</button>
+                <button class="btn btn-sm btn-primary view-btn">View Details</button>
               </div>
             </div>
           </div>
@@ -59,10 +66,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
-import auth from '../store/auth';
+// import auth from '../store/auth'; // Removed if isAdmin is not used
 import currentTournament from '../store/current-tournament';
 
 const router = useRouter();
@@ -72,14 +79,14 @@ const tournaments = ref([]);
 const loading = ref(true);
 const error = ref(null);
 
-// Computed property to check if user is admin
-const isAdmin = computed(() => auth.state.isAuthenticated);
+// Removed isAdmin computed property as it wasn't used in the template
+// const isAdmin = computed(() => auth.state.isAuthenticated);
 
 // Fetch tournaments
 const fetchTournaments = async () => {
   loading.value = true;
   error.value = null;
-  
+
   try {
     const response = await api.getTournaments();
     tournaments.value = response.data;
@@ -91,61 +98,71 @@ const fetchTournaments = async () => {
   }
 };
 
-// Format date for display
+// Format date for display (Month Day, Year)
 const formatDate = (dateString) => {
   if (!dateString) return 'TBD';
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
+  // Adjust for potential timezone issues by parsing as UTC
+  const utcDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return utcDate.toLocaleDateString('en-US', {
+    month: 'short',
     day: 'numeric',
-    year: 'numeric'
+    // year: 'numeric' // Optionally add year if needed
   });
 };
 
-// Navigation functions
+// Format date range
+const formatDateRange = (startDateString, endDateString) => {
+  const start = formatDate(startDateString);
+  const end = formatDate(endDateString);
+  if (start === 'TBD') return 'Dates TBD';
+  if (end === 'TBD' || start === end) return start;
+  return `${start} - ${end}`;
+}
+
+// Get CSS class for status pill
+const getStatusClass = (status) => {
+    if (!status) return 'unknown';
+    return status.toLowerCase().replace(' ', '-'); // e.g., 'In Progress' -> 'in-progress'
+};
+
+// Navigation function
 const navigateToTournament = (tournamentId) => {
-  // Find the tournament by ID to get its data
   const tournament = tournaments.value.find(t => t.id === tournamentId);
   if (tournament) {
-    // Set the current tournament in store
     currentTournament.setTournament({
       id: tournament.id,
       name: tournament.name
     });
   }
-  
   router.push({ name: 'TournamentHome', params: { id: tournamentId } });
 };
 
-const navigateToEdit = (tournamentId) => {
-  router.push({ name: 'ManageTournament', params: { id: tournamentId } });
-};
-
-const navigateToCreate = () => {
-  router.push({ name: 'CreateTournament' });
-};
-
-// Add the function back to navigate to tournament admin login
-const navigateToTournamentAdmin = () => {
-  router.push({ name: 'TournamentAdminLogin' });
-};
+// Removed unused navigation functions
+// const navigateToEdit = (tournamentId) => { ... };
+// const navigateToCreate = () => { ... };
+// const navigateToTournamentAdmin = () => { ... };
 
 onMounted(() => {
   fetchTournaments();
-  document.title = 'Tournaments - Baseball Tournament App';
+  document.title = 'Tournaments - Rocketpad'; // Update title
 });
 </script>
 
 <style scoped>
 .tournaments-view {
-  padding: 1rem;
+  /* Uses container padding defined in main layout */
+  width: 100%;
 }
 
 .page-header {
-  margin-bottom: 2rem;
+  /* Similar to HomeView header */
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .header-content {
@@ -153,268 +170,270 @@ onMounted(() => {
 }
 
 .page-header h1 {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-  color: var(--color-primary);
+  /* Use global h1 styles */
+  margin-bottom: var(--space-xs);
 }
 
 .subtitle {
-  font-size: 1.2rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 0;
+  /* Use global styles if defined, or refine here */
+  font-size: 1.1rem;
+  color: var(--color-text-light);
+  margin-top: 0;
 }
 
 .content-container {
-  max-width: 1200px;
-  margin: 0 auto;
+  /* Uses container width/margins from parent */
+}
+
+.tournaments-section {
+  /* Inherits .card styles from template */
+  /* Add specific overrides if needed */
 }
 
 .section-header {
+  /* Shared style with HomeView */
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  gap: var(--space-sm);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .section-header h2 {
+  /* Use global h2/h3 styles */
   margin: 0;
-  font-size: 1.5rem;
-  color: var(--color-text-primary);
+  color: var(--color-text);
+  font-size: 1.5rem; /* Adjust if needed */
 }
 
 .badge {
+  /* Shared style with HomeView */
   background-color: var(--color-primary-light);
-  color: var(--color-primary);
+  color: white;
   padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.85rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
+/* Consistent loading/error/empty states */
 .loading-state, .error-state, .empty-state {
+  padding: var(--space-xl) var(--space-lg);
+  text-align: center;
+  background-color: var(--color-background-alt);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-md);
+  color: var(--color-text-light);
+}
+
+.loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 200px;
-  text-align: center;
+  gap: var(--space-sm);
 }
 
 .loading-spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
+  /* Shared style with HomeView */
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-primary-light);
+  border-left-color: transparent;
   border-radius: 50%;
-  border-top: 4px solid var(--color-primary);
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
 
-.empty-state p {
-  color: var(--color-text-secondary);
-  margin-bottom: 1.5rem;
+.error-state {
+  color: var(--color-danger);
+  background-color: rgba(244, 63, 94, 0.05);
+  border: 1px solid rgba(244, 63, 94, 0.2);
 }
 
-.empty-state-actions {
-  margin-top: 1rem;
+.empty-state {
+  font-style: normal;
 }
 
 .tournaments-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  /* Responsive columns */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: var(--space-lg);
 }
 
-.tournament-card {
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.tournament-card-item {
+  background-color: var(--color-background-card); /* White background */
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   cursor: pointer;
   display: flex;
   flex-direction: column;
+  box-shadow: var(--shadow-sm);
 }
 
-.tournament-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.tournament-card-item:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary-light);
 }
 
 .tournament-header {
-  padding: 1.25rem;
-  background-color: var(--color-primary-light);
+  padding: var(--space-md);
+  background-color: var(--color-background-alt); /* Subtle header background */
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-sm);
 }
 
 .tournament-header h3 {
   margin: 0;
-  font-size: 1.25rem;
-  color: var(--color-primary);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  /* Truncate long names */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-pill {
   padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
+  border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid transparent;
 }
 
-.status-pill.active {
-  background-color: #e6f7e6;
-  color: #2e8b57;
+/* Status Colors (Example) */
+.status-pill.upcoming {
+  background-color: rgba(96, 165, 250, 0.1); /* info color */
+  color: #1d4ed8; /* darker info */
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.status-pill.active,
+.status-pill.in-progress {
+  background-color: rgba(52, 211, 153, 0.1); /* success color */
+  color: #047857; /* darker success */
+  border-color: rgba(52, 211, 153, 0.3);
 }
 
 .status-pill.completed {
-  background-color: #e6e6e6;
-  color: #666666;
+  background-color: rgba(107, 114, 128, 0.1); /* neutral color */
+  color: #374151; /* darker neutral */
+  border-color: rgba(107, 114, 128, 0.3);
 }
 
-.status-pill.upcoming {
-  background-color: #e6f0ff;
-  color: #3366cc;
+.status-pill.cancelled {
+  background-color: rgba(244, 63, 94, 0.1); /* danger color */
+  color: #be123c; /* darker danger */
+  border-color: rgba(244, 63, 94, 0.3);
+}
+
+.status-pill.unknown {
+    background-color: var(--color-background-alt);
+    color: var(--color-text-lighter);
+    border-color: var(--color-border);
 }
 
 .tournament-details {
-  padding: 1.25rem;
-  flex-grow: 1;
+  padding: var(--space-md);
+  flex-grow: 1; /* Allows details to fill space */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md); /* Space between desc and metadata */
 }
 
 .tournament-description {
-  color: var(--color-text-primary);
-  margin-top: 0;
-  margin-bottom: 1rem;
-  line-height: 1.5;
+  color: var(--color-text-light);
+  margin: 0;
+  line-height: 1.6;
+  font-size: 0.9rem;
   /* Limit to 3 lines */
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: calc(1.6 * 0.9rem * 3); /* Reserve space for 3 lines */
 }
 
 .tournament-metadata {
-  margin-top: 1rem;
+  margin: 0; /* Reset margin */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
 .metadata-item {
   display: flex;
   align-items: center;
-  margin-bottom: 0.5rem;
-  color: var(--color-text-secondary);
+  gap: var(--space-sm);
+  color: var(--color-text-light);
+  font-size: 0.85rem;
 }
 
 .metadata-item .icon {
-  margin-right: 0.5rem;
-  width: 16px;
-  height: 16px;
-  /* You can add actual icons later */
-  display: inline-block;
-  background-color: var(--color-text-secondary);
-  opacity: 0.6;
-  border-radius: 50%;
+  /* Basic icon styling */
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .tournament-footer {
-  padding: 1rem;
-  border-top: 1px solid #f0f0f0;
+  padding: var(--space-sm) var(--space-md); /* Reduced padding */
+  border-top: 1px solid var(--color-border);
   display: flex;
-  justify-content: space-between;
-}
-
-.btn {
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-  border: none;
-  transition: background-color 0.2s;
+  justify-content: flex-end; /* Align button right */
+  background-color: var(--color-background-alt); /* Subtle footer background */
 }
 
 .view-btn {
-  background-color: var(--color-primary);
-  color: white;
+  /* Uses .btn, .btn-sm, .btn-primary from global styles */
 }
 
-.view-btn:hover {
-  background-color: var(--color-primary-dark);
-}
+/* Remove redundant/unused styles */
+/* .edit-btn, .admin-actions, .create-tournament-btn, .primary, .admin-btn, .header-actions */
 
-.edit-btn {
-  background-color: #f0f0f0;
-  color: #333;
-}
-
-.edit-btn:hover {
-  background-color: #e0e0e0;
-}
-
-.admin-actions {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: center;
-}
-
-.create-tournament-btn {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-}
-
-.primary {
-  background-color: var(--color-primary);
-  color: white;
-}
-
-.primary:hover {
-  background-color: var(--color-primary-dark);
-}
-
-.admin-btn {
-  background-color: #f0f0f0;
-  color: #555;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-  border: none;
-  transition: background-color 0.2s;
-}
-
-.admin-btn:hover {
-  background-color: #e0e0e0;
-}
-
-.header-actions {
-  display: flex;
-  justify-content: flex-end;
-}
 
 @media (max-width: 768px) {
   .page-header {
-    flex-direction: column;
-    text-align: center;
+    /* Keep flex layout, but allow wrap maybe? */
+    flex-wrap: wrap;
+    text-align: left;
   }
-  
+
   .header-content {
-    text-align: center;
-    margin-bottom: 1rem;
+    /* Take full width if actions wrap */
+    width: 100%;
+    text-align: left;
+    margin-bottom: var(--space-md); /* Add space if actions wrap */
   }
-  
-  .tournaments-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .tournament-card {
-    max-width: 100%;
-  }
+}
+
+@media (max-width: 480px) {
+    .page-header h1 {
+        font-size: 1.8rem;
+    }
+    .subtitle {
+        font-size: 1rem;
+    }
+    .section-header h2 {
+        font-size: 1.3rem;
+    }
+    .tournament-header h3 {
+        font-size: 1.05rem;
+    }
 }
 </style> 

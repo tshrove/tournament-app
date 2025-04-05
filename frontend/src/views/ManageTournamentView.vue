@@ -1,124 +1,155 @@
 <template>
   <div class="manage-tournament-view">
     <header class="page-header">
-      <h1>{{ isEditing ? 'Edit Tournament' : 'Create Tournament' }}</h1>
-      <p class="subtitle">{{ isEditing ? 'Update tournament details' : 'Set up a new tournament' }}</p>
+      <h1>{{ isEditing ? 'Edit Tournament' : 'Create New Tournament' }}</h1>
+      <p class="subtitle">{{ isEditing ? 'Update the details for this tournament.' : 'Fill in the details to set up a new tournament.' }}</p>
     </header>
     
     <div class="content-container">
-      <div v-if="loading" class="loading-state">
+      <div v-if="loading && isEditing" class="loading-state card">
         <div class="loading-spinner"></div>
         <p>Loading tournament data...</p>
       </div>
       
-      <div v-else-if="error" class="error-state">
+      <div v-else-if="error" class="error-state card">
         <p>{{ error }}</p>
-        <button class="btn primary" @click="goBack">Go Back</button>
+        <button class="btn btn-secondary" @click="goBack">Go Back</button>
       </div>
       
-      <form v-else @submit.prevent="saveTournament" class="tournament-form">
-        <div class="form-group">
-          <label for="name">Tournament Name*</label>
-          <input 
-            type="text" 
-            id="name" 
-            v-model="formData.name" 
-            required 
-            placeholder="Enter tournament name"
-          />
-        </div>
-        
-        <div class="form-group">
-          <label for="description">Description</label>
-          <textarea 
-            id="description" 
-            v-model="formData.description" 
-            rows="4" 
-            placeholder="Enter tournament description"
-          ></textarea>
-        </div>
-        
-        <div class="form-row">
+      <form v-else @submit.prevent="saveTournament" class="tournament-form card">
+        <div class="form-section">
           <div class="form-group">
-            <label for="startDate">Start Date</label>
+            <label for="name">Tournament Name <span class="required">*</span></label>
             <input 
-              type="date" 
-              id="startDate" 
-              v-model="formData.start_date"
+              type="text" 
+              id="name" 
+              v-model="formData.name" 
+              required 
+              placeholder="e.g., Spring Softball Classic"
             />
           </div>
           
           <div class="form-group">
-            <label for="endDate">End Date</label>
+            <label for="description">Description</label>
+            <textarea 
+              id="description" 
+              v-model="formData.description" 
+              rows="4" 
+              placeholder="Optional: Provide a brief description or details about the tournament"
+            ></textarea>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="startDate">Start Date</label>
+              <input 
+                type="date" 
+                id="startDate" 
+                v-model="formData.start_date"
+                class="date-picker"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="endDate">End Date</label>
+              <input 
+                type="date" 
+                id="endDate" 
+                v-model="formData.end_date"
+                class="date-picker"
+              />
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="location">Location</label>
             <input 
-              type="date" 
-              id="endDate" 
-              v-model="formData.end_date"
+              type="text" 
+              id="location" 
+              v-model="formData.location" 
+              placeholder="e.g., City Park Fields"
             />
+          </div>
+          
+          <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" v-model="formData.status">
+              <option value="Upcoming">Upcoming</option>
+              <option value="Active">Active</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
           </div>
         </div>
         
-        <div class="form-group">
-          <label for="location">Location</label>
-          <input 
-            type="text" 
-            id="location" 
-            v-model="formData.location" 
-            placeholder="Enter tournament location"
-          />
-        </div>
-        
-        <div class="form-group">
-          <label for="status">Status</label>
-          <select id="status" v-model="formData.status">
-            <option value="Active">Active</option>
-            <option value="Upcoming">Upcoming</option>
-            <option value="Completed">Completed</option>
-          </select>
-        </div>
-        
-        <div class="form-group admin-password">
-          <label for="adminPassword">Admin Password</label>
-          <input 
-            type="password" 
-            id="adminPassword" 
-            v-model="formData.admin_password" 
-            placeholder="Set admin password for this tournament"
-          />
-          <p class="help-text">This password will be required to access admin features for this tournament.</p>
+        <div class="form-section admin-section">
+          <h4>Admin Settings</h4>
+          <div class="form-group admin-password">
+            <label for="adminPassword">Tournament Admin Password</label>
+            <input 
+              type="password" 
+              id="adminPassword" 
+              v-model="formData.admin_password" 
+              placeholder="Leave blank to keep unchanged (if editing)"
+              autocomplete="new-password"
+            />
+            <p class="help-text">Set or update the password required to access admin functions (like scoring, scheduling) for <strong>this specific tournament</strong>.</p>
+          </div>
         </div>
         
         <div class="form-actions">
-          <button type="button" class="btn secondary" @click="goBack">Cancel</button>
-          <button type="submit" class="btn primary" :disabled="saving">
+          <button type="button" class="btn btn-secondary" @click="goBack" :disabled="saving">Cancel</button>
+          <button type="submit" class="btn btn-primary" :disabled="saving">
+            <span v-if="saving" class="spinner"></span>
             {{ saving ? 'Saving...' : (isEditing ? 'Update Tournament' : 'Create Tournament') }}
           </button>
         </div>
       </form>
       
-      <div v-if="isEditing" class="danger-zone">
-        <h3>Danger Zone</h3>
-        <div class="danger-action">
-          <div>
-            <h4>Delete Tournament</h4>
-            <p>Once deleted, all data including teams, games, and brackets will be permanently removed.</p>
+      <div v-if="isEditing" class="danger-zone card">
+        <div class="danger-header">
+          <h3>Danger Zone</h3>
+        </div>
+        <div class="danger-content">
+          <div class="danger-action">
+            <div>
+              <h4>Delete this Tournament</h4>
+              <p>Once deleted, all associated data (teams, games, schedule, results, bracket) will be permanently removed. This action cannot be undone.</p>
+            </div>
+            <button class="btn btn-danger" @click="confirmDelete" :disabled="saving">
+              Delete Tournament
+            </button>
           </div>
-          <button class="btn danger" @click="confirmDelete">Delete Tournament</button>
         </div>
       </div>
     </div>
     
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay">
-      <div class="modal-content">
-        <h3>Confirm Deletion</h3>
-        <p>Are you sure you want to delete this tournament? This action cannot be undone.</p>
-        <div class="modal-actions">
-          <button class="btn secondary" @click="showDeleteModal = false">Cancel</button>
-          <button class="btn danger" @click="deleteTournament">Delete Tournament</button>
+    <transition name="fade">
+      <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
+        <div class="modal-content card">
+          <div class="modal-header">
+            <h3>Confirm Deletion</h3>
+            <button class="modal-close-btn" @click="closeDeleteModal" aria-label="Close modal">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p>Are you sure you want to permanently delete the tournament:</p>
+            <p class="tournament-name-emphasis">"{{ formData.name }}"?</p>
+            <p class="warning-text">
+              <span class="warning-icon">⚠️</span>
+              This action cannot be undone. All associated data will be permanently removed.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="closeDeleteModal">Cancel</button>
+            <button class="btn btn-danger" @click="deleteTournament" :disabled="saving">
+              <span v-if="saving" class="spinner"></span>
+              {{ saving ? 'Deleting...' : 'Confirm Delete' }}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
 
@@ -137,7 +168,7 @@ const formData = ref({
   start_date: '',
   end_date: '',
   location: '',
-  status: 'Active',
+  status: 'Upcoming',
   admin_password: ''
 });
 
@@ -147,31 +178,56 @@ const saving = ref(false);
 const error = ref(null);
 const showDeleteModal = ref(false);
 
-// Check if we're editing an existing tournament or creating a new one
-const isEditing = computed(() => {
-  return route.name === 'ManageTournament' && route.params.id;
-});
+// Check if we're editing an existing tournament
+const isEditing = computed(() => !!route.params.id);
+
+// Format date for input type=date (YYYY-MM-DD)
+const formatDateForInput = (dateString) => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    // Adjust for timezone offset to get the correct local date
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    return date.toISOString().split('T')[0];
+  } catch (e) {
+    console.error("Error formatting date:", e);
+    return ''; // Return empty if date is invalid
+  }
+};
 
 // Load tournament data if editing
 const loadTournament = async () => {
-  if (!isEditing.value) return;
-  
+  if (!isEditing.value) {
+    document.title = 'Create Tournament - Rocketpad';
+    return;
+  }
+
   loading.value = true;
   error.value = null;
-  
+  document.title = 'Loading Tournament... - Rocketpad';
+
   try {
     const tournamentId = route.params.id;
-    const tournamentResponse = await api.getTournament(tournamentId);
-    const settingsResponse = await api.getSettings({ tournament_id: tournamentId });
-    
-    // Populate form with tournament data
+    // Fetch tournament details and settings concurrently
+    const [tournamentResponse, settingsResponse] = await Promise.all([
+      api.getTournament(tournamentId),
+      api.getSettings({ tournament_id: tournamentId })
+    ]);
+
+    // Populate form data, formatting dates correctly for input fields
     formData.value = {
       ...tournamentResponse.data,
-      admin_password: settingsResponse.data.adminPassword || ''
+      start_date: formatDateForInput(tournamentResponse.data.start_date),
+      end_date: formatDateForInput(tournamentResponse.data.end_date),
+      admin_password: '' // Clear password field for security
+      // admin_password: settingsResponse.data.adminPassword || '' // Or fetch if needed, but generally avoid pre-filling passwords
     };
+    document.title = `Edit: ${formData.value.name} - Rocketpad`;
+
   } catch (err) {
     console.error('Error loading tournament:', err);
-    error.value = 'Failed to load tournament data. Please try again later.';
+    error.value = 'Failed to load tournament data. Please check the ID or try again later.';
+    document.title = 'Error Loading Tournament - Rocketpad';
   } finally {
     loading.value = false;
   }
@@ -183,44 +239,46 @@ const saveTournament = async () => {
   error.value = null;
   
   try {
-    // Create a copy of form data to avoid mutating the original
-    const tournamentData = { ...formData.value };
-    
-    // Make sure dates are in the correct format (YYYY-MM-DD)
-    // If empty string, set to null to avoid backend parsing errors
-    if (tournamentData.start_date === '') {
-      tournamentData.start_date = null;
+    // Prepare data for API (handle dates)
+    const apiData = {
+      ...formData.value,
+      start_date: formData.value.start_date || null,
+      end_date: formData.value.end_date || null,
+    };
+    // Don't send empty password string if not changing
+    if (!apiData.admin_password && isEditing.value) {
+      delete apiData.admin_password;
     }
-    
-    if (tournamentData.end_date === '') {
-      tournamentData.end_date = null;
-    }
-    
+
+    let tournamentId = route.params.id;
+
     if (isEditing.value) {
       // Update existing tournament
-      const tournamentId = route.params.id;
-      await api.updateTournament(tournamentId, tournamentData);
-      
-      // Update tournament settings
-      await api.updateSettings({
-        tournament_id: tournamentId,
-        name: tournamentData.name,
-        description: tournamentData.description,
-        admin_password: tournamentData.admin_password
-      });
+      await api.updateTournament(tournamentId, apiData);
+      // Update settings (only if password is provided)
+      if (apiData.admin_password) {
+        await api.updateSettings({
+          tournament_id: tournamentId,
+          admin_password: apiData.admin_password
+        });
+      }
     } else {
       // Create new tournament
-      const response = await api.createTournament(tournamentData);
-      const newTournamentId = response.data.id;
-      
-      // No need to update settings as they're created with the tournament
+      const response = await api.createTournament(apiData);
+      tournamentId = response.data.id;
+      // Settings like password might be handled during creation by the backend
+      // or require a separate settings call if needed immediately after creation
     }
-    
-    // Navigate back to tournaments list
-    router.push({ name: 'Tournaments' });
+
+    // Navigate back to the admin list (or the new tournament?)
+    router.push({ name: 'TournamentAdmin' }); // Go back to admin list
+    // Optionally navigate to the newly created/edited tournament dashboard:
+    // router.push({ name: 'TournamentHome', params: { id: tournamentId } });
+
   } catch (err) {
     console.error('Error saving tournament:', err);
-    error.value = 'Failed to save tournament. Please try again later.';
+    // More specific error handling based on API response if possible
+    error.value = `Failed to save tournament: ${err.response?.data?.message || err.message || 'Please try again.'}`;
   } finally {
     saving.value = false;
   }
@@ -231,19 +289,26 @@ const confirmDelete = () => {
   showDeleteModal.value = true;
 };
 
+const closeDeleteModal = () => {
+  showDeleteModal.value = false;
+};
+
 const deleteTournament = async () => {
-  saving.value = true;
+  if (!isEditing.value) return;
+
+  saving.value = true; // Use saving state to disable buttons
   error.value = null;
-  
+
   try {
     const tournamentId = route.params.id;
     await api.deleteTournament(tournamentId);
     showDeleteModal.value = false;
-    router.push({ name: 'Tournaments' });
+    // Navigate back to the admin list after successful deletion
+    router.push({ name: 'TournamentAdmin' });
   } catch (err) {
     console.error('Error deleting tournament:', err);
-    error.value = 'Failed to delete tournament. Please try again later.';
-    showDeleteModal.value = false;
+    error.value = `Failed to delete tournament: ${err.response?.data?.message || err.message || 'Please try again.'}`;
+    showDeleteModal.value = false; // Close modal even on error
   } finally {
     saving.value = false;
   }
@@ -251,12 +316,12 @@ const deleteTournament = async () => {
 
 // Go back to previous page
 const goBack = () => {
-  router.push({ name: 'Tournaments' });
+  // Go back to the tournament admin list view
+  router.push({ name: 'TournamentAdmin' });
 };
 
 onMounted(() => {
   loadTournament();
-  document.title = isEditing.value ? 'Edit Tournament' : 'Create Tournament';
 });
 </script>
 
@@ -267,7 +332,9 @@ onMounted(() => {
 
 .page-header {
   margin-bottom: 2rem;
-  text-align: center;
+  text-align: left;
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .page-header h1 {
@@ -285,50 +352,77 @@ onMounted(() => {
 .content-container {
   max-width: 800px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
 }
 
 .loading-state, .error-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
+  padding: var(--space-xl) var(--space-lg);
   text-align: center;
+  background-color: var(--color-background-alt);
 }
 
 .loading-spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-primary-light);
+  border-left-color: transparent;
   border-radius: 50%;
-  border-top: 4px solid var(--color-primary);
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  to { transform: rotate(360deg); }
+}
+
+.error-state {
+  color: var(--color-danger);
+  background-color: rgba(244, 63, 94, 0.05);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+}
+.error-state p {
+  margin-bottom: var(--space-md);
 }
 
 .tournament-form {
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.form-section {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-xl);
+}
+.form-section:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.admin-section h4 {
+  margin-top: 0;
+  margin-bottom: var(--space-lg);
+  color: var(--color-accent);
+  font-size: 1.1rem;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-lg);
+}
+.form-group:last-child {
+  margin-bottom: 0;
 }
 
 .form-row {
-  display: flex;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-lg);
+  align-items: start;
 }
 
 .form-row .form-group {
-  flex: 1;
+  margin-bottom: 0;
 }
 
 label {
@@ -336,6 +430,11 @@ label {
   margin-bottom: 0.5rem;
   font-weight: 600;
   color: var(--color-text-primary);
+}
+
+label .required {
+  color: var(--color-danger);
+  margin-left: var(--space-xs);
 }
 
 input, textarea, select {
@@ -351,16 +450,35 @@ textarea {
 }
 
 .help-text {
-  margin-top: 0.5rem;
+  margin-top: var(--space-sm);
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-light);
+  line-height: 1.5;
+}
+.help-text strong {
+  color: var(--color-text);
+  font-weight: 600;
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-border);
+}
+
+.form-actions .spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: var(--space-xs);
+  vertical-align: text-bottom;
 }
 
 .btn {
@@ -378,106 +496,200 @@ textarea {
   cursor: not-allowed;
 }
 
-.primary {
+.btn-primary {
   background-color: var(--color-primary);
   color: white;
 }
 
-.primary:hover:not(:disabled) {
+.btn-primary:hover:not(:disabled) {
   background-color: var(--color-primary-dark);
 }
 
-.secondary {
+.btn-secondary {
   background-color: #f0f0f0;
   color: #333;
 }
 
-.secondary:hover {
+.btn-secondary:hover {
   background-color: #e0e0e0;
 }
 
-.danger {
+.btn-danger {
   background-color: #f44336;
   color: white;
 }
 
-.danger:hover {
+.btn-danger:hover {
   background-color: #d32f2f;
 }
 
 .danger-zone {
-  margin-top: 3rem;
-  padding: 1.5rem;
-  border: 1px solid #f44336;
-  border-radius: 8px;
+  border-color: var(--color-danger);
+  background-color: rgba(244, 63, 94, 0.02);
+}
+
+.danger-header {
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid rgba(244, 63, 94, 0.3);
+  margin-bottom: var(--space-md);
 }
 
 .danger-zone h3 {
-  color: #f44336;
-  margin-top: 0;
-  margin-bottom: 1rem;
+  color: var(--color-danger);
+  margin: 0;
+  font-size: 1.2rem;
 }
 
 .danger-action {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-md);
 }
 
 .danger-action h4 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
+  margin: 0 0 var(--space-xs) 0;
+  color: var(--color-text);
 }
 
 .danger-action p {
-  margin-top: 0;
-  color: var(--color-text-secondary);
+  margin: 0;
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+  max-width: 450px;
+}
+
+.danger-action .btn {
+  flex-shrink: 0;
 }
 
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background-color: rgba(17, 24, 39, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
+  padding: var(--space-md);
 }
 
 .modal-content {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 2rem;
-  width: 90%;
+  width: 100%;
   max-width: 500px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
 }
 
-.modal-content h3 {
-  margin-top: 0;
-  color: var(--color-text-primary);
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-md);
 }
 
-.modal-actions {
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--color-accent);
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  line-height: 1;
+  padding: 0 var(--space-xs);
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+.modal-close-btn:hover {
+  color: var(--color-text);
+}
+
+.modal-body {
+  overflow-y: auto;
+  margin-bottom: var(--space-lg);
+}
+
+.tournament-name-emphasis {
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  margin: var(--space-xs) 0 var(--space-md) 0;
+}
+
+.warning-text {
+  background-color: rgba(251, 191, 36, 0.1);
+  color: #b45309;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  margin-top: var(--space-md);
+}
+
+.warning-icon {
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: var(--space-md);
+  margin-top: auto;
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.modal-footer .spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: var(--space-xs);
+  vertical-align: text-bottom;
 }
 
 @media (max-width: 768px) {
-  .form-row {
-    flex-direction: column;
-    gap: 0;
-  }
-  
   .danger-action {
     flex-direction: column;
-    gap: 1rem;
-    text-align: center;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .danger-action p {
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header h1 {
+    font-size: 1.8rem;
+  }
+  .subtitle {
+    font-size: 1rem;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+  }
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: var(--space-sm);
+  }
+  .form-actions .btn {
+    width: 100%;
   }
 }
 </style> 

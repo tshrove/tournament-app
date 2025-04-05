@@ -3,17 +3,19 @@
     <header class="page-header">
       <div class="header-content">
         <div class="back-link">
-          <a @click="goBackToTournaments">&larr; All Tournaments</a>
+          <button @click="goBackToTournaments" class="btn btn-sm btn-outline back-button">
+            &larr; All Tournaments
+          </button>
         </div>
-        <h1>{{ tournamentName }}</h1>
-        <p class="subtitle">Welcome to the tournament dashboard</p>
+        <h2>{{ tournamentName }}</h2>
+        <p class="subtitle">Tournament Dashboard</p>
       </div>
     </header>
     
     <div class="content-container">
-      <section class="schedule-section">
+      <section class="card schedule-section">
         <div class="section-header">
-          <h2>Upcoming & Recent Games</h2>
+          <h3>Upcoming & Recent Games</h3>
           <div class="badge" v-if="schedule.length > 0">{{ schedule.length }} Games</div>
         </div>
         
@@ -41,10 +43,10 @@
       </section>
       
       <!-- Game Results Section -->
-      <section class="game-results-section">
+      <section class="card game-results-section">
         <div class="section-header">
-          <h2>Game Results</h2>
-          <div class="badge" v-if="playedGames.length > 0">{{ playedGames.length }} Games</div>
+          <h3>Game Results</h3>
+          <div class="badge" v-if="playedGames.length > 0">{{ playedGames.length }} Played</div>
         </div>
         
         <div v-if="scheduleLoading" class="loading-state">
@@ -62,17 +64,17 @@
         
         <div v-else class="results-container">
           <div class="results-grid">
-            <div v-for="game in playedGames" :key="game.id" class="result-card">
+            <div v-for="game in playedGames" :key="game.id" class="result-card-item">
               <div class="result-header">
                 <div class="result-date">{{ formatDate(game.date) }}</div>
-                <span class="status-pill">{{ game.status }}</span>
+                <span class="status-pill complete">{{ game.status }}</span>
               </div>
               <div class="result-teams">
                 <div class="team" :class="{'winner': game.team1_score > game.team2_score}">
                   <span class="team-name">{{ game.team1_name }}</span>
                   <span class="team-score">{{ game.team1_score }}</span>
                 </div>
-                <div class="vs-divider">VS</div>
+                <div class="vs-divider">vs</div>
                 <div class="team" :class="{'winner': game.team2_score > game.team1_score}">
                   <span class="team-name">{{ game.team2_name }}</span>
                   <span class="team-score">{{ game.team2_score }}</span>
@@ -88,9 +90,9 @@
       </section>
       
       <!-- Tournament Bracket Section -->
-      <section class="bracket-section">
+      <section class="card bracket-section">
         <div class="section-header">
-          <h2>Tournament Bracket</h2>
+          <h3>Tournament Bracket</h3>
         </div>
         
         <div v-if="bracketLoading" class="loading-state">
@@ -111,9 +113,9 @@
         </div>
       </section>
       
-      <section class="rankings-section">
+      <section class="card rankings-section">
         <div class="section-header">
-          <h2>Current Rankings</h2>
+          <h3>Current Rankings</h3>
           <div class="badge" v-if="rankings.length > 0">{{ rankings.length }} Teams</div>
         </div>
         
@@ -131,42 +133,42 @@
         </div>
         
         <div v-else class="rankings-container">
-          <!-- Desktop table view -->
-          <table class="rankings-table desktop-rankings">
-            <thead>
-              <tr>
-                <th>Rank</th>
-                <th>Team Name</th>
-                <th>W</th>
-                <th>L</th>
-                <th>Pct</th>
-                <th>Runs For</th>
-                <th>Runs Against</th>
-                <th>Diff</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="team in rankings" :key="team.id">
-                <td class="rank-cell">{{ team.rank }}</td>
-                <td class="team-name-cell">{{ team.name }}</td>
-                <td>{{ team.wins }}</td>
-                <td>{{ team.losses }}</td>
-                <td class="win-pct">{{ formatPercentage(team.win_percentage) }}</td>
-                <td>{{ team.runs_scored }}</td>
-                <td>{{ team.runs_allowed }}</td>
-                <td :class="{'positive': team.run_differential > 0, 'negative': team.run_differential < 0}">
-                  {{ team.run_differential > 0 ? '+' : '' }}{{ team.run_differential }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="table-wrapper desktop-rankings">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Team Name</th>
+                  <th>W</th>
+                  <th>L</th>
+                  <th>Pct</th>
+                  <th>RF</th>
+                  <th>RA</th>
+                  <th>Diff</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(team, index) in rankings" :key="team.id">
+                  <td class="rank-cell">{{ index + 1 }}</td>
+                  <td class="team-name-cell">{{ team.name }}</td>
+                  <td>{{ team.wins }}</td>
+                  <td>{{ team.losses }}</td>
+                  <td class="win-pct">{{ formatPercentage(team.win_percentage) }}</td>
+                  <td>{{ team.runs_scored }}</td>
+                  <td>{{ team.runs_allowed }}</td>
+                  <td :class="{'positive': team.run_differential > 0, 'negative': team.run_differential < 0}">
+                    {{ team.run_differential > 0 ? '+' : '' }}{{ team.run_differential }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           
-          <!-- Mobile card view -->
           <div class="mobile-rankings">
-            <div v-for="team in rankings" :key="team.id" class="ranking-card">
+            <div v-for="(team, index) in rankings" :key="team.id" class="ranking-card-item">
               <div class="ranking-card-header">
-                <span class="rank-badge">{{ team.rank }}</span>
-                <h3 class="team-name">{{ team.name }}</h3>
+                <span class="rank-badge">{{ index + 1 }}</span>
+                <h4 class="team-name">{{ team.name }}</h4>
               </div>
               <div class="ranking-card-content">
                 <div class="ranking-stat">
@@ -175,7 +177,7 @@
                 </div>
                 <div class="ranking-stat">
                   <span class="stat-label">Win %</span>
-                  <span class="stat-value">{{ formatPercentage(team.win_percentage) }}</span>
+                  <span class="stat-value win-pct">{{ formatPercentage(team.win_percentage) }}</span>
                 </div>
                 <div class="ranking-stat">
                   <span class="stat-label">Run Diff</span>
@@ -383,24 +385,25 @@ const loadAllData = async () => {
 };
 
 // Watch for changes in the tournament ID
-watch(tournamentId, () => {
-  loadAllData();
-});
-
-onMounted(() => {
-  loadAllData();
-});
+watch(tournamentId, (newId) => {
+  if (newId) {
+      loadAllData();
+  } else {
+      // Handle case where ID becomes invalid/null (e.g., navigating away)
+      console.log("Tournament ID cleared, potentially navigating away.");
+      // Optionally clear existing data
+      tournamentName.value = 'Tournament';
+      schedule.value = [];
+      rankings.value = [];
+      bracketData.value = null;
+  }
+}, { immediate: true }); // immediate: true to run on initial load
 
 // Add this function to navigate back to tournaments list
 const goBackToTournaments = () => {
   // Clear the current tournament selection
   currentTournament.clearTournament();
   router.push({ name: 'Tournaments' });
-};
-
-// Update this function to navigate to tournament admin for the specific tournament
-const navigateToTournamentAdmin = () => {
-  router.push({ name: 'TournamentAdmin', params: { id: tournamentId.value } });
 };
 </script>
 
@@ -415,24 +418,33 @@ const navigateToTournamentAdmin = () => {
 }
 
 .page-header {
-  text-align: center;
+  text-align: left; /* Align header left */
   margin-bottom: var(--space-xl);
   width: 100%;
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
 }
 
-.page-header h1 {
-  font-size: 2.25rem;
+.back-link {
+  margin-bottom: var(--space-md);
+}
+
+/* Style for the back button */
+.back-button {
+  /* Using btn-outline styles from global CSS */
+  /* Add specific adjustments if needed */
+  font-size: 0.85rem;
+}
+
+.page-header h2 {
+  /* Use global h2 styles */
   margin-bottom: var(--space-xs);
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  font-weight: 700;
+  /* Remove gradient text */
 }
 
 .subtitle {
   color: var(--color-text-light);
-  font-size: 1.1rem;
+  font-size: 1rem; /* Adjusted size */
   margin-top: 0;
 }
 
@@ -441,84 +453,74 @@ const navigateToTournamentAdmin = () => {
   grid-template-columns: 1fr;
   gap: var(--space-xl);
   width: 100%;
-  box-sizing: border-box; /* Ensure padding is included in width */
-  max-width: 1200px; /* Limit width on larger screens */
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  margin-bottom: var(--space-md);
+  justify-content: space-between; /* Space out title and badge */
+  margin-bottom: var(--space-lg); /* More space below header */
   gap: var(--space-sm);
-  width: 100%;
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border); /* Add subtle separator */
 }
 
-.section-header h2 {
+.section-header h3 {
+  /* Use global h3 styles */
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--color-accent);
+  color: var(--color-text); /* Standard text color for section titles */
 }
 
 .badge {
   background-color: var(--color-primary-light);
   color: white;
-  padding: 0.2rem 0.6rem;
+  padding: 0.25rem 0.75rem;
   border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap; /* Prevent badge text wrapping */
 }
 
-.schedule-section, .rankings-section, .game-results-section {
-  background-color: var(--color-background-card);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  box-shadow: var(--shadow-md);
-  width: 100%;
-  box-sizing: border-box; /* Ensure padding is included in width */
+.schedule-section, .rankings-section, .game-results-section, .bracket-section {
+  /* Specific styles for sections if needed */
+  overflow: hidden; /* Still needed */
 }
 
-.bracket-section {
-  background-color: var(--color-background-card);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  box-shadow: var(--shadow-md);
-  margin-bottom: var(--space-xl);
-  overflow: hidden; /* Contain any potential overflow */
-  width: 100%;
-  box-sizing: border-box; /* Ensure padding is included in width */
-}
-
-.bracket-section .bracket-container {
+.bracket-container {
   padding: 0;
   background-color: transparent;
-  max-width: 100%; /* Ensure it doesn't exceed container width */
-  overflow-x: auto; /* Allow horizontal scrolling within the bracket section */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: calc(var(--space-md) * -1); /* Offset card padding */
+  padding: var(--space-md); /* Add padding back inside */
 }
 
+/* Consistent loading/error/empty states */
 .loading-state, .error-state, .empty-state {
-  padding: var(--space-lg);
+  padding: var(--space-xl) var(--space-lg);
   text-align: center;
+  background-color: var(--color-background-alt);
   border-radius: var(--radius-md);
-  background-color: var(--color-background);
-  margin: var(--space-md) 0;
+  margin-top: var(--space-md);
+  color: var(--color-text-light);
 }
 
 .loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
+/* Simplified spinner */
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(67, 97, 238, 0.2);
-  border-left-color: var(--color-primary);
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-primary-light);
+  border-left-color: transparent; /* Make it a semi-circle */
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -527,41 +529,30 @@ const navigateToTournamentAdmin = () => {
 
 .error-state {
   color: var(--color-danger);
+  background-color: rgba(244, 63, 94, 0.05); /* Subtle danger background */
+  border: 1px solid rgba(244, 63, 94, 0.2);
 }
 
 .empty-state {
-  color: var(--color-text-light);
-  font-style: italic;
+  font-style: normal; /* Remove italic */
 }
 
-/* Game Results specific styles */
+/* Game Results refined styles */
 .results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--space-md);
-  width: 100%;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-lg);
 }
 
-.result-card {
-  background-color: var(--color-background);
+.result-card-item {
+  background-color: var(--color-background-alt);
   border-radius: var(--radius-md);
   padding: var(--space-md);
-  box-shadow: var(--shadow-sm);
+  /* Removed shadow, parent card has it */
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  position: relative;
-  overflow: hidden;
-}
-
-.result-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: linear-gradient(to bottom, var(--color-primary), var(--color-secondary));
+  border: 1px solid var(--color-border);
 }
 
 .result-header {
@@ -569,32 +560,48 @@ const navigateToTournamentAdmin = () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-xs);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px dashed var(--color-border);
 }
 
 .result-date {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--color-text-light);
   font-weight: 500;
+}
+
+.status-pill {
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.status-pill.complete {
+  background-color: rgba(52, 211, 153, 0.1);
+  color: #047857; /* Darker success */
+  border-color: rgba(52, 211, 153, 0.3);
 }
 
 .result-teams {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+  margin: var(--space-sm) 0;
 }
 
 .team {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-sm);
-  background-color: rgba(243, 244, 246, 0.5);
+  padding: var(--space-xs) 0;
 }
 
-.team.winner {
-  background-color: rgba(16, 185, 129, 0.1);
-  font-weight: 600;
+.team.winner .team-name {
+  font-weight: 700;
+  color: var(--color-text);
 }
 
 .team.winner .team-score {
@@ -604,26 +611,28 @@ const navigateToTournamentAdmin = () => {
 
 .team-name {
   font-weight: 500;
+  color: var(--color-text-light);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-grow: 1;
+  padding-right: var(--space-sm);
 }
 
 .team-score {
   font-weight: 600;
   font-size: 1.1rem;
-  background-color: var(--color-background-dark);
-  border-radius: var(--radius-sm);
-  padding: 0.1rem 0.5rem;
-  min-width: 2rem;
-  text-align: center;
+  min-width: 2.5rem; /* Ensure space */
+  text-align: right;
+  color: var(--color-text);
 }
 
 .vs-divider {
   text-align: center;
-  font-size: 0.75rem;
-  color: var(--color-text-light);
-  margin: 0 auto;
-  background-color: var(--color-background-dark);
-  padding: 0.1rem 0.5rem;
-  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin: var(--space-xs) auto;
   width: fit-content;
 }
 
@@ -631,173 +640,154 @@ const navigateToTournamentAdmin = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: var(--space-xs);
-  font-size: 0.85rem;
+  margin-top: var(--space-sm);
+  font-size: 0.8rem;
+  color: var(--color-text-lighter);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--color-border);
 }
 
-.field {
-  color: var(--color-text-light);
-}
-
-.status-pill {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: var(--color-success);
-  padding: 0.2rem 0.6rem;
-  border-radius: var(--radius-full);
-  font-size: 0.7rem;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-.game-time {
-  color: var(--color-text-light);
-  font-size: 0.85rem;
-}
-
-/* Rankings table specific styles */
-.rankings-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
+/* Rankings specific styles */
 .rankings-container {
-  overflow-x: auto; /* Enable horizontal scrolling for the table container */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-  margin: 0 -1px; /* Prevent horizontal scrolling of the page */
+  /* No specific styles needed now, handled by table wrapper / mobile cards */
 }
 
-.rankings-table th {
-  background-color: var(--color-accent);
-  color: white;
-  font-weight: 600;
+/* Wrapper for desktop table to handle overflow */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Leverage global table styles by default */
+.rankings-container table {
+  /* width: 100%; // Handled globally */
+  /* border-collapse: separate; // Handled globally */
+  /* ... other base styles ... */
+}
+
+.rankings-container th {
+  /* background-color: var(--color-background-alt); // Handled globally */
+  /* color: var(--color-text-light); // Handled globally */
+  /* ... other header styles ... */
+  text-align: center; /* Center align table headers */
+  white-space: nowrap;
+}
+
+.rankings-container td {
+  /* padding: var(--space-md) var(--space-lg); // Handled globally */
   text-align: center;
-  padding: var(--space-sm) var(--space-md);
-  position: relative;
+  vertical-align: middle;
 }
 
-.rankings-table th:not(:last-child)::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 25%;
-  height: 50%;
-  width: 1px;
-  background-color: rgba(255, 255, 255, 0.2);
+.rankings-container tbody tr:hover {
+  /* background-color: var(--color-background-alt); // Handled globally */
 }
 
-.rankings-table td {
-  padding: var(--space-sm) var(--space-md);
-  text-align: center;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.rankings-table tbody tr:hover {
-  background-color: var(--color-background-dark);
-}
-
-.rankings-table .rank-cell {
+.rankings-container .rank-cell {
   font-weight: 700;
-  color: var(--color-accent);
+  color: var(--color-primary);
+  width: 50px; /* Fixed width for rank */
 }
 
-.rankings-table .team-name-cell {
+.rankings-container .team-name-cell {
   text-align: left;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: normal; /* Allow team names to wrap if needed */
 }
 
-.rankings-table .win-pct {
+.rankings-container .win-pct {
   color: var(--color-text-light);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  font-family: monospace; /* Use monospace for consistent alignment */
 }
 
-.rankings-table .positive {
+.rankings-container .positive {
   color: var(--color-success);
   font-weight: 600;
 }
 
-.rankings-table .negative {
+.rankings-container .negative {
   color: var(--color-danger);
   font-weight: 600;
 }
 
 /* Mobile rankings card view */
 .mobile-rankings {
-  display: none; /* Hidden by default, shown on mobile */
+  display: none;
   flex-direction: column;
   gap: var(--space-md);
-  width: 100%;
-  box-sizing: border-box;
 }
 
-.ranking-card {
-  background-color: var(--color-background);
+.ranking-card-item {
+  background-color: var(--color-background-alt);
   border-radius: var(--radius-md);
   padding: var(--space-md);
-  box-shadow: var(--shadow-sm);
-  position: relative;
-  overflow: hidden;
-}
-
-.ranking-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: linear-gradient(to bottom, var(--color-primary), var(--color-primary-light));
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
 .ranking-card-header {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-sm);
+  gap: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px dashed var(--color-border);
 }
 
 .rank-badge {
-  background-color: var(--color-accent);
+  background-color: var(--color-primary);
   color: white;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  flex-shrink: 0;
 }
 
 .ranking-card-header .team-name {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 600;
+  color: var(--color-text);
 }
 
 .ranking-card-content {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-sm);
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); /* Responsive columns */
+  gap: var(--space-md);
+  padding-top: var(--space-sm);
 }
 
 .ranking-stat {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  text-align: center; /* Center align stats */
 }
 
 .stat-label {
   font-size: 0.75rem;
   color: var(--color-text-light);
+  text-transform: uppercase;
+  font-weight: 500;
 }
 
 .stat-value {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.stat-value.win-pct {
+    font-family: monospace;
 }
 
 .stat-value.positive {
@@ -811,175 +801,69 @@ const navigateToTournamentAdmin = () => {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .page-header {
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: var(--space-lg);
+    /* text-align: center; */ /* Keep left aligned */
+    padding-bottom: var(--space-md);
   }
-  
-  .header-content, .header-actions {
-    width: 100%;
-    text-align: center;
-    margin-bottom: 0.5rem;
+
+  .page-header h2 {
+    font-size: 2rem; /* Adjust if needed based on global h2 */
   }
-  
-  .page-header h1 {
-    font-size: 1.75rem;
-  }
-  
+
   .subtitle {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
-  
-  .section-header h2 {
-    font-size: 1.25rem;
+
+  .section-header h3 {
+    font-size: 1.3rem; /* Adjust if needed based on global h3 */
   }
-  
-  .section-header {
-    flex-wrap: wrap; /* Allow badge to wrap on small screens */
-  }
-  
-  .rankings-table th,
-  .rankings-table td {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: 0.875rem;
-  }
-  
-  .results-grid {
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-  
-  .schedule-section, 
-  .rankings-section, 
-  .game-results-section,
-  .bracket-section {
-    padding: var(--space-md);
-    border-radius: var(--radius-md);
-    margin-left: 0;
-    margin-right: 0;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  
-  /* Improve responsiveness for the ranking table */
-  .rankings-table th:nth-child(5),
-  .rankings-table th:nth-child(6),
-  .rankings-table th:nth-child(7),
-  .rankings-table td:nth-child(5),
-  .rankings-table td:nth-child(6),
-  .rankings-table td:nth-child(7) {
-    display: none; /* Hide less important columns on mobile */
-  }
-  
-  /* Add card-based layout for rankings on smaller screens */
-  .rankings-mobile-card {
-    display: none;
-  }
-  
+
   /* Switch from table to cards on mobile */
   .desktop-rankings {
     display: none;
   }
-  
+
   .mobile-rankings {
     display: flex;
   }
-  
-  .content-container {
-    max-width: 100%; /* Full width on tablets and mobile */
-    padding: 0; /* Remove any potential padding */
-  }
+
+  /* Remove responsive table column hiding as we use cards now */
+  /* .rankings-table th:nth-child(n+5), */
+  /* .rankings-table td:nth-child(n+5) { */
+  /*   display: none; */
+  /* } */
 }
 
 @media (max-width: 480px) {
-  .home-view {
-    padding: 0; /* Remove padding on very small screens */
-    margin: 0; /* Remove margin on very small screens */
+
+  .page-header h2 {
+      font-size: 1.8rem;
   }
-  
-  .content-container {
-    gap: var(--space-lg); /* Reduce gap between sections */
+
+  .section-header h3 {
+      font-size: 1.2rem;
   }
-  
-  .schedule-section, 
-  .rankings-section, 
-  .game-results-section,
-  .bracket-section {
-    padding: var(--space-sm);
-    border-radius: var(--radius-sm);
-    margin-left: 0;
-    margin-right: 0;
+
+  .results-grid {
+      grid-template-columns: 1fr; /* Single column on small screens */
+      gap: var(--space-md);
   }
-  
-  .team-name {
-    font-size: 0.9rem;
-    max-width: 130px; /* Reduce max width on small screens */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .result-card {
-    padding: var(--space-sm);
-    width: 100%;
-    box-sizing: border-box;
-  }
-  
-  .ranking-card {
-    padding: var(--space-sm);
-  }
-  
+
   .ranking-card-content {
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-xs);
+      grid-template-columns: repeat(3, 1fr); /* Keep 3 columns */
+      gap: var(--space-sm);
+  }
+  
+  .ranking-card-header .team-name {
+      font-size: 1.1rem;
   }
   
   .stat-value {
-    font-size: 0.85rem;
-  }
-  
-  /* Ensure team score stays aligned */
-  .team-score {
-    min-width: 1.5rem;
-    padding: 0.1rem 0.3rem;
+      font-size: 0.9rem;
   }
 }
 
-/* Add styles for back link */
-.back-link {
-  margin-bottom: 0.5rem;
-}
+/* Remove unused admin button styles */
+/* .header-actions { ... } */
+/* .admin-btn { ... } */
 
-.back-link a {
-  color: var(--color-primary);
-  text-decoration: none;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-.back-link a:hover {
-  text-decoration: underline;
-}
-
-/* Admin button styles */
-.header-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.admin-btn {
-  background-color: #f0f0f0;
-  color: #555;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-  border: none;
-  transition: background-color 0.2s;
-}
-
-.admin-btn:hover {
-  background-color: #e0e0e0;
-}
 </style> 

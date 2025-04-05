@@ -1,17 +1,16 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from database import db
-from models import Team, Game, Bracket, BracketMatch, TournamentSettings
+from models import Team, Game, BracketMatch, TournamentSettings
 from datetime import datetime
-import math
-import os
 
 def create_app():
     app = Flask(__name__)
     # Configure CORS with explicit headers and handle all URL patterns
     CORS(app, 
          resources={r"/*": {
-             "origins": ["http://localhost:8080", "http://127.0.0.1:8080", 
+             "origins": ["http://localhost:8080", "http://localhost", 
+                         "http://localhost:80", "http://127.0.0.1:8080", 
                         "http://ec2-44-194-164-99.compute-1.amazonaws.com",
                         "http://ec2-44-194-164-99.compute-1.amazonaws.com:80"],
              "allow_headers": ["Content-Type", "Authorization", "Accept", "X-Requested-With"],

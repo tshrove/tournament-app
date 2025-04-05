@@ -30,6 +30,7 @@
             :games="schedule" 
             :allowDelete="false"
             :showScores="true"
+            :isAdmin="false"
           />
         </div>
       </section>

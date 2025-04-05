@@ -33,6 +33,75 @@ const handleDeleteGame = async (gameId) => {
   }
 };
 
+// Add handler methods for editing different game properties
+const handleEditField = async ({ gameId, field }) => {
+  try {
+    await api.updateScheduledGame(gameId, { field });
+    showNotification('Field updated successfully', 'success');
+    fetchSchedule(); // Refresh data
+  } catch (err) {
+    showNotification('Error updating field: ' + (err.response?.data?.error || err.message), 'error');
+  }
+};
+
+const handleEditDate = async ({ gameId, date }) => {
+  try {
+    await api.updateScheduledGame(gameId, { date });
+    showNotification('Date updated successfully', 'success');
+    fetchSchedule(); // Refresh data
+  } catch (err) {
+    showNotification('Error updating date: ' + (err.response?.data?.error || err.message), 'error');
+  }
+};
+
+const handleEditTime = async ({ gameId, time }) => {
+  try {
+    await api.updateScheduledGame(gameId, { time });
+    showNotification('Time updated successfully', 'success');
+    fetchSchedule(); // Refresh data
+  } catch (err) {
+    showNotification('Error updating time: ' + (err.response?.data?.error || err.message), 'error');
+  }
+};
+
+const handleEditTeam = async ({ gameId, teamNum, teamName }) => {
+  try {
+    // We need to get the teams first to find the team ID
+    const teamsResponse = await api.getTeams();
+    const teams = teamsResponse.data;
+    
+    // Find the team ID from the name
+    const team = teams.find(t => t.name === teamName);
+    if (!team) {
+      showNotification(`Team "${teamName}" not found`, 'error');
+      return;
+    }
+    
+    const updateData = {};
+    if (teamNum === 1) {
+      updateData.team1_id = team.id;
+    } else {
+      updateData.team2_id = team.id;
+    }
+    
+    await api.updateScheduledGame(gameId, updateData);
+    showNotification('Team updated successfully', 'success');
+    fetchSchedule(); // Refresh data
+  } catch (err) {
+    showNotification('Error updating team: ' + (err.response?.data?.error || err.message), 'error');
+  }
+};
+
+const handleEditStatus = async ({ gameId, status }) => {
+  try {
+    await api.updateScheduledGame(gameId, { status });
+    showNotification('Status updated successfully', 'success');
+    fetchSchedule(); // Refresh data
+  } catch (err) {
+    showNotification('Error updating status: ' + (err.response?.data?.error || err.message), 'error');
+  }
+};
+
 onMounted(fetchSchedule);
 </script>
 
@@ -64,7 +133,13 @@ onMounted(fetchSchedule);
     <ScheduleTable 
       v-else 
       :games="schedule" 
+      :isAdmin="true"
       @delete-game="handleDeleteGame"
+      @edit-field="handleEditField"
+      @edit-date="handleEditDate"
+      @edit-time="handleEditTime"
+      @edit-team="handleEditTeam"
+      @edit-status="handleEditStatus"
     />
   </div>
 </template>

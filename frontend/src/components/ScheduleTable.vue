@@ -13,10 +13,14 @@ const props = defineProps({
   showScores: {
     type: Boolean,
     default: true
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['delete-game']);
+const emit = defineEmits(['delete-game', 'edit-field', 'edit-date', 'edit-time', 'edit-team', 'edit-status']);
 
 // Game type filter
 const gameTypeFilter = ref('all');
@@ -64,6 +68,48 @@ const getGameOutcome = (game) => {
     return { winner: 'team2', loser: 'team1' };
   } else {
     return { winner: 'tie', loser: 'tie' };
+  }
+};
+
+// Add methods to handle editing different game properties
+const editField = (gameId, currentField) => {
+  const newField = prompt('Enter new field name:', currentField);
+  if (newField !== null && newField !== currentField) {
+    emit('edit-field', { gameId, field: newField });
+  }
+};
+
+const editDate = (gameId, currentDate) => {
+  const newDate = prompt('Enter new date (YYYY-MM-DD):', currentDate);
+  if (newDate !== null && newDate !== currentDate) {
+    emit('edit-date', { gameId, date: newDate });
+  }
+};
+
+const editTime = (gameId, currentTime) => {
+  const newTime = prompt('Enter new time (HH:MM):', currentTime);
+  if (newTime !== null && newTime !== currentTime) {
+    emit('edit-time', { gameId, time: newTime });
+  }
+};
+
+const editTeam = (gameId, teamNum, currentTeam) => {
+  const newTeam = prompt(`Enter new team name for Team ${teamNum}:`, currentTeam);
+  if (newTeam !== null && newTeam !== currentTeam) {
+    emit('edit-team', { gameId, teamNum, teamName: newTeam });
+  }
+};
+
+const editStatus = (gameId, currentStatus) => {
+  const statuses = ['Scheduled', 'In Progress', 'Completed', 'Cancelled'];
+  let statusOptions = '';
+  statuses.forEach(status => {
+    statusOptions += `${status}${status === currentStatus ? ' (current)' : ''}\n`;
+  });
+  
+  const newStatus = prompt(`Enter new status:\n${statusOptions}`, currentStatus);
+  if (newStatus !== null && newStatus !== currentStatus && statuses.includes(newStatus)) {
+    emit('edit-status', { gameId, status: newStatus });
   }
 };
 </script>
@@ -121,34 +167,86 @@ const getGameOutcome = (game) => {
             'bracket-game': game.game_type === 'Bracket' 
           }"
         >
-          <td data-label="Date">{{ formatDate(game.date) }}</td>
-          <td data-label="Time">{{ formatTime(game.time) }}</td>
-          <td class="teams-column">
+          <td data-label="Date">
+            {{ formatDate(game.date) }}
+            <button 
+              v-if="props.isAdmin"
+              @click="editDate(game.id, game.date)" 
+              class="btn-edit" 
+              title="Edit date"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </td>
+          <td data-label="Time">
+            {{ formatTime(game.time) }}
+            <button 
+              v-if="props.isAdmin"
+              @click="editTime(game.id, game.time)" 
+              class="btn-edit" 
+              title="Edit time"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </td>
+          <td class="teams-column" data-label="Teams">
             <div class="matchup">
-              <span 
-                class="team" 
-                :class="{ 
-                  'winner': getGameOutcome(game).winner === 'team1',
-                  'loser': getGameOutcome(game).loser === 'team1'
-                }"
-              >
-                {{ game.team1_name }}
-              </span>
+              <div class="team-container">
+                <span 
+                  class="team" 
+                  :class="{ 
+                    'winner': getGameOutcome(game).winner === 'team1',
+                    'loser': getGameOutcome(game).loser === 'team1'
+                  }"
+                >
+                  {{ game.team1_name }}
+                </span>
+                <button 
+                  v-if="props.isAdmin"
+                  @click="editTeam(game.id, 1, game.team1_name)" 
+                  class="btn-edit" 
+                  title="Edit team 1"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
               
               <span v-if="!showScores && game.team1_score !== null && game.team2_score !== null" class="vs-text">vs</span>
               
-              <span 
-                class="team" 
-                :class="{ 
-                  'winner': getGameOutcome(game).winner === 'team2',
-                  'loser': getGameOutcome(game).loser === 'team2'
-                }"
-              >
-                {{ game.team2_name }}
-              </span>
+              <div class="team-container">
+                <span 
+                  class="team" 
+                  :class="{ 
+                    'winner': getGameOutcome(game).winner === 'team2',
+                    'loser': getGameOutcome(game).loser === 'team2'
+                  }"
+                >
+                  {{ game.team2_name }}
+                </span>
+                <button 
+                  v-if="props.isAdmin"
+                  @click="editTeam(game.id, 2, game.team2_name)" 
+                  class="btn-edit" 
+                  title="Edit team 2"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </td>
-          <td v-if="showScores" class="scores-column">
+          <td v-if="showScores" class="scores-column" data-label="Score">
             <div v-if="game.team1_score !== null && game.team2_score !== null" class="score-container">
               <span 
                 class="score" 
@@ -166,7 +264,20 @@ const getGameOutcome = (game) => {
             </div>
             <span v-else class="no-score">Pending</span>
           </td>
-          <td data-label="Field">{{ game.field }}</td>
+          <td data-label="Field">
+            {{ game.field }}
+            <button 
+              v-if="props.isAdmin"
+              @click="editField(game.id, game.field)" 
+              class="btn-edit" 
+              title="Edit field"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </td>
           <td data-label="Type">
             <span class="game-type-badge" :class="game.game_type.toLowerCase().replace(' ', '-')">
               {{ game.game_type }}
@@ -176,6 +287,17 @@ const getGameOutcome = (game) => {
             <span class="status-badge" :class="game.status.toLowerCase()">
               {{ game.status }}
             </span>
+            <button 
+              v-if="props.isAdmin"
+              @click="editStatus(game.id, game.status)" 
+              class="btn-edit" 
+              title="Edit status"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
           </td>
           <td v-if="allowDelete" class="actions" data-label="Actions">
             <button 
@@ -473,6 +595,35 @@ tr.bracket-game:hover {
   font-style: italic;
 }
 
+.btn-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-xs);
+  transition: all var(--transition-fast);
+}
+
+.btn-edit:hover {
+  background-color: rgba(79, 70, 229, 0.1);
+}
+
+.btn-edit svg {
+  width: 14px;
+  height: 14px;
+}
+
+.team-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
 @media (max-width: 768px) {
   .schedule-controls {
     flex-direction: column;
@@ -565,24 +716,16 @@ tr.bracket-game:hover {
     color: var(--color-text-light);
   }
   
-  .schedule-table td:nth-child(3)::before {
-    content: "Field:";
-  }
-  
-  .schedule-table td:nth-child(4)::before {
-    content: "Type:";
-  }
-  
-  .schedule-table td:nth-child(5)::before {
-    content: "Status:";
-  }
-  
   .btn-delete {
     margin-left: auto;
   }
   
   .btn-delete span {
     display: none;
+  }
+  
+  .team-container {
+    justify-content: flex-end;
   }
 }
 

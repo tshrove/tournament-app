@@ -43,37 +43,54 @@ apiClient.interceptors.response.use(
 );
 
 export default {
-  getRankings() {
-    return apiClient.get('/rankings');
+  // Tournament management endpoints
+  getTournaments() {
+    return apiClient.get('/api/tournaments');
   },
-  // We will add other endpoints here later
+  getTournament(tournamentId) {
+    return apiClient.get(`/api/tournaments/${tournamentId}`);
+  },
+  createTournament(tournamentData) {
+    return apiClient.post('/api/tournaments', tournamentData);
+  },
+  updateTournament(tournamentId, tournamentData) {
+    return apiClient.put(`/api/tournaments/${tournamentId}`, tournamentData);
+  },
+  deleteTournament(tournamentId) {
+    return apiClient.delete(`/api/tournaments/${tournamentId}`);
+  },
+
+  // Team endpoints with optional tournament filtering
+  getRankings(params) {
+    return apiClient.get('/rankings', { params });
+  },
   addTeam(teamData) {
     return apiClient.post('/api/teams', teamData);
   },
   addGame(gameData) {
     return apiClient.post('/games', gameData);
   },
-  getTeams() {
-    return apiClient.get('/api/teams');
+  getTeams(params) {
+    return apiClient.get('/api/teams', { params });
   },
-  getBracket() {
-    return apiClient.get('/brackets');
+  getBracket(params) {
+    return apiClient.get('/brackets', { params });
   },
   updateBracketMatch(matchId, scoreData) {
     return apiClient.patch(`/brackets/match/${matchId}`, scoreData);
   },
-  generateBracket() {
-    return apiClient.post('/brackets/generate');
+  generateBracket(tournamentId) {
+    return apiClient.post('/brackets/generate', { tournament_id: tournamentId });
   },
-  clearBracket() {
-    return apiClient.post('/brackets/clear');
+  clearBracket(tournamentId) {
+    return apiClient.post('/brackets/clear', { tournament_id: tournamentId });
   },
   deleteTeam(teamId) {
     return apiClient.delete(`/api/teams/${teamId}`);
   },
   // Schedule API methods
-  getSchedule() {
-    return apiClient.get('/api/schedule');
+  getSchedule(params) {
+    return apiClient.get('/api/schedule', { params });
   },
   getGameById(gameId) {
     return apiClient.get(`/api/schedule/${gameId}`);
@@ -96,13 +113,13 @@ export default {
     });
   },
   // Tournament settings methods
-  getSettings() {
-    return apiClient.get('/api/settings');
+  getSettings(params) {
+    return apiClient.get('/api/settings', { params });
   },
   updateSettings(settingsData) {
     return apiClient.put('/api/settings', settingsData);
   },
-  resetTournament() {
-    return apiClient.post('/api/reset');
+  resetTournament(tournamentId) {
+    return apiClient.post('/api/reset', { tournament_id: tournamentId });
   }
 }; 

@@ -9,18 +9,59 @@ import AdminView from '../views/AdminView.vue'
 import GameScoringView from '../views/GameScoringView.vue'
 import TournamentSettingsView from '../views/TournamentSettingsView.vue'
 import AdminLoginView from '../views/AdminLoginView.vue'
+import TournamentsView from '../views/TournamentsView.vue'
+import ManageTournamentView from '../views/ManageTournamentView.vue'
+import TournamentAdminView from '../views/TournamentAdminView.vue'
+import TournamentAdminLoginView from '../views/TournamentAdminLoginView.vue'
 import auth from '../store/auth'
+import tournamentAdminAuth from '../store/tournament-admin-auth'
 
 const routes = [
   // Public routes
   {
     path: '/',
-    name: 'Home',
-    component: HomeView,
+    name: 'Tournaments',
+    component: TournamentsView,
     meta: { isPublic: true }
   },
+
+  // Single tournament view (previously the home view)
+  {
+    path: '/tournament/:id',
+    name: 'TournamentHome',
+    component: HomeView,
+    meta: { isPublic: true },
+    props: true
+  },
   
-  // Admin login route
+  // Tournament management routes
+  {
+    path: '/tournament-admin-login',
+    name: 'TournamentAdminLogin',
+    component: TournamentAdminLoginView,
+    meta: { isPublic: true }
+  },
+  {
+    path: '/tournament-admin',
+    name: 'TournamentAdmin',
+    component: TournamentAdminView,
+    meta: { isTournamentAdmin: true }
+  },
+  {
+    path: '/tournament/create',
+    name: 'CreateTournament',
+    component: ManageTournamentView,
+    meta: { isTournamentAdmin: true }
+  },
+  {
+    path: '/tournament/:id/edit',
+    name: 'ManageTournament',
+    component: ManageTournamentView,
+    meta: { isTournamentAdmin: true },
+    props: true
+  },
+  
+  // Tournament-specific admin login
   {
     path: '/admin-login',
     name: 'AdminLogin',
@@ -28,7 +69,7 @@ const routes = [
     meta: { isPublic: true }
   },
   
-  // Admin dashboard route
+  // Tournament-specific admin dashboard
   {
     path: '/admin',
     name: 'Admin',
@@ -36,49 +77,49 @@ const routes = [
     meta: { isAdmin: true }
   },
   
-  // Admin functionality routes
+  // Admin functionality routes - tournament specific
   {
-    path: '/manage-teams',
+    path: '/tournament/:id/manage-teams',
     name: 'TeamManagement',
     component: TeamManagementView,
-    meta: { isAdmin: true }
+    meta: { isAdmin: true },
+    props: true
   },
   {
-    path: '/bracket',
+    path: '/tournament/:id/bracket',
     name: 'Bracket',
     component: BracketView,
-    meta: { isAdmin: true }
+    meta: { isAdmin: true },
+    props: true
   },
   {
-    path: '/schedule',
+    path: '/tournament/:id/schedule',
     name: 'Schedule',
     component: ScheduleView,
-    meta: { isAdmin: true }
+    meta: { isAdmin: true },
+    props: true
   },
   {
-    path: '/manage-schedule',
+    path: '/tournament/:id/manage-schedule',
     name: 'ManageSchedule',
     component: ManageScheduleView,
-    meta: { isAdmin: true }
+    meta: { isAdmin: true },
+    props: true
   },
   {
-    path: '/game-scoring',
+    path: '/tournament/:id/game-scoring',
     name: 'GameScoring',
     component: GameScoringView,
-    meta: { isAdmin: true }
+    meta: { isAdmin: true },
+    props: true
   },
   {
-    path: '/tournament-settings',
+    path: '/tournament/:id/settings',
     name: 'TournamentSettings',
     component: TournamentSettingsView,
-    meta: { isAdmin: true }
+    meta: { isAdmin: true },
+    props: true
   }
-  // Add a placeholder route for now
-  // {
-  //   path: '/',
-  //   name: 'Home',
-  //   component: { template: '<div>Placeholder Home Page</div>' } // Temporary component
-  // }
 ]
 
 const router = createRouter({
@@ -86,10 +127,23 @@ const router = createRouter({
   routes
 })
 
-// Navigation guard to protect admin routes
+// Navigation guards
 router.beforeEach((to, from, next) => {
-  // Check if the route requires admin access
-  if (to.matched.some(record => record.meta.isAdmin)) {
+  // Check for routes requiring tournament admin access
+  if (to.matched.some(record => record.meta.isTournamentAdmin)) {
+    // If not authenticated as tournament admin, redirect to tournament admin login
+    if (!tournamentAdminAuth.state.isAuthenticated) {
+      next({
+        path: '/tournament-admin-login',
+        query: { redirect: to.fullPath }
+      });
+    } else {
+      // User is authenticated as tournament admin, allow access
+      next();
+    }
+  } 
+  // Check for routes requiring regular admin access (tournament-specific)
+  else if (to.matched.some(record => record.meta.isAdmin)) {
     // If not authenticated, redirect to login page with return URL
     if (!auth.state.isAuthenticated) {
       next({
@@ -101,7 +155,7 @@ router.beforeEach((to, from, next) => {
       next();
     }
   } else {
-    // Not an admin route, allow access
+    // Public route, allow access
     next();
   }
 });

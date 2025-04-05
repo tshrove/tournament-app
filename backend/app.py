@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from database import db
-from models import Team, Game, BracketMatch, TournamentSettings
+from models import Team, Game, BracketMatch, TournamentSettings, Tournament
 from datetime import datetime
 
 def create_app():
@@ -53,13 +53,25 @@ def index():
 # Team routes
 @app.route('/api/teams', methods=['GET'])
 def get_teams():
-    teams = Team.query.all()
+    tournament_id = request.args.get('tournament_id')
+    query = Team.query
+    
+    if tournament_id:
+        query = query.filter_by(tournament_id=tournament_id)
+    
+    teams = query.all()
     return jsonify([team.to_dict() for team in teams])
 
 @app.route('/teams', methods=['GET'])
 def get_teams_alt():
     # Alternative endpoint for compatibility
-    teams = Team.query.all()
+    tournament_id = request.args.get('tournament_id')
+    query = Team.query
+    
+    if tournament_id:
+        query = query.filter_by(tournament_id=tournament_id)
+    
+    teams = query.all()
     return jsonify([team.to_dict() for team in teams])
 
 @app.route('/api/teams', methods=['POST'])
@@ -80,7 +92,8 @@ def add_team():
             runs_scored=data.get('runs_scored', 0),
             runs_allowed=data.get('runs_allowed', 0),
             run_differential=data.get('run_differential', 0),
-            games_played=data.get('games_played', 0)
+            games_played=data.get('games_played', 0),
+            tournament_id=data.get('tournament_id')
         )
         db.session.add(new_team)
         db.session.commit()
@@ -114,8 +127,14 @@ def delete_team_alt(team_id):
 @app.route('/rankings', methods=['GET'])
 def get_rankings():
     try:
-        # Fetch all teams
-        teams = Team.query.all()
+        tournament_id = request.args.get('tournament_id')
+        
+        # Fetch teams with optional tournament filter
+        query = Team.query
+        if tournament_id:
+            query = query.filter_by(tournament_id=tournament_id)
+            
+        teams = query.all()
         
         # Calculate winning percentage for each team
         for team in teams:
@@ -124,14 +143,12 @@ def get_rankings():
             else:
                 team.win_percentage = 0.0
         
-        # Sort teams: 
-        # 1. By wins (descending)
-        # 2. By runs allowed (ascending - fewer runs against is better)
+        # Sort teams
         ranked_teams = sorted(
             teams, 
             key=lambda t: (
-                -(t.wins or 0),  # Negative for descending order
-                t.runs_allowed or 0  # Ascending order (fewer runs allowed is better)
+                -(t.wins or 0),
+                t.runs_allowed or 0
             )
         )
         
@@ -139,9 +156,8 @@ def get_rankings():
         rankings_data = []
         for index, team in enumerate(ranked_teams):
             team_data = team.to_dict()
-            team_data['rank'] = index + 1  # Add rank (1-based)
+            team_data['rank'] = index + 1
             
-            # Add win percentage to the response
             if team.games_played > 0:
                 team_data['win_percentage'] = round(team.wins / team.games_played, 3)
             else:
@@ -157,8 +173,14 @@ def get_rankings():
 @app.route('/brackets', methods=['GET'])
 def get_bracket():
     try:
-        # Get all bracket matches organized by rounds
-        matches = BracketMatch.query.order_by(BracketMatch.round_number, BracketMatch.match_display_id).all()
+        tournament_id = request.args.get('tournament_id')
+        
+        # Get bracket matches with optional tournament filter
+        query = BracketMatch.query
+        if tournament_id:
+            query = query.filter_by(tournament_id=tournament_id)
+            
+        matches = query.order_by(BracketMatch.round_number, BracketMatch.match_display_id).all()
         
         # If no matches exist, return empty structure
         if not matches:
@@ -196,7 +218,8 @@ def get_bracket():
                 'team1_score': match.team1_score,
                 'team2_score': match.team2_score,
                 'winner': winner.to_dict() if winner else None,
-                'status': match.status
+                'status': match.status,
+                'tournament_id': match.tournament_id
             }
             rounds[round_num].append(match_data)
         
@@ -208,16 +231,29 @@ def get_bracket():
 def generate_bracket():
     """Generate a new tournament bracket with proper seeding for a 6-team format"""
     try:
+        data = request.get_json()
+        tournament_id = data.get('tournament_id') if data else None
+        
+        # Filter by tournament_id if provided
+        bracket_query = BracketMatch.query
+        game_query = Game.query.filter_by(game_type='Bracket')
+        team_query = Team.query
+        
+        if tournament_id:
+            bracket_query = bracket_query.filter_by(tournament_id=tournament_id)
+            game_query = game_query.filter_by(tournament_id=tournament_id)
+            team_query = team_query.filter_by(tournament_id=tournament_id)
+        
         # Clear existing bracket data
-        BracketMatch.query.delete()
+        bracket_query.delete()
         
         # Delete any existing bracket games
-        Game.query.filter_by(game_type='Bracket').delete()
+        game_query.delete()
         
         db.session.commit()
         
         # Fetch teams ranked by win percentage
-        teams = Team.query.all()
+        teams = team_query.all()
         
         # Calculate winning percentage for each team
         for team in teams:
@@ -261,7 +297,8 @@ def generate_bracket():
             team1_seed=3,
             team2_seed=6,
             winner_id=None,
-            status='Scheduled'
+            status='Scheduled',
+            tournament_id=tournament_id
         )
         
         db.session.add(match1)
@@ -275,7 +312,8 @@ def generate_bracket():
             field='Bracket Field',
             status='Scheduled',
             game_type='Bracket',
-            bracket_match_id=match_id
+            bracket_match_id=match_id,
+            tournament_id=tournament_id
         )
         db.session.add(game1)
         
@@ -292,7 +330,8 @@ def generate_bracket():
             team1_seed=4,
             team2_seed=5,
             winner_id=None,
-            status='Scheduled'
+            status='Scheduled',
+            tournament_id=tournament_id
         )
         
         db.session.add(match2)
@@ -306,7 +345,8 @@ def generate_bracket():
             field='Bracket Field',
             status='Scheduled',
             game_type='Bracket',
-            bracket_match_id=match_id
+            bracket_match_id=match_id,
+            tournament_id=tournament_id
         )
         db.session.add(game2)
         
@@ -324,7 +364,8 @@ def generate_bracket():
             team1_seed=1,
             team2_seed=None,  # Will be filled later
             winner_id=None,
-            status='Pending'
+            status='Pending',
+            tournament_id=tournament_id
         )
         
         db.session.add(match3)
@@ -341,7 +382,8 @@ def generate_bracket():
             team1_seed=2,
             team2_seed=None,  # Will be filled later
             winner_id=None,
-            status='Pending'
+            status='Pending',
+            tournament_id=tournament_id
         )
         
         db.session.add(match4)
@@ -358,7 +400,8 @@ def generate_bracket():
             team1_seed=None,  # Will be filled later
             team2_seed=None,  # Will be filled later
             winner_id=None,
-            status='Pending'
+            status='Pending',
+            tournament_id=tournament_id
         )
         
         db.session.add(match5)
@@ -491,7 +534,8 @@ def update_bracket_match(match_id):
                             field='Bracket Field',
                             status='Scheduled',
                             game_type='Bracket',
-                            bracket_match_id=next_match.match_display_id
+                            bracket_match_id=next_match.match_display_id,
+                            tournament_id=tournament_id
                         )
                         db.session.add(game)
         
@@ -567,12 +611,14 @@ def add_game_score():
 
 @app.route('/api/schedule', methods=['GET'])
 def get_schedule():
-    """Get all scheduled games"""
-    try:
-        games = Game.query.order_by(Game.date, Game.time).all()
-        return jsonify([game.to_dict() for game in games])
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    tournament_id = request.args.get('tournament_id')
+    query = Game.query
+    
+    if tournament_id:
+        query = query.filter_by(tournament_id=tournament_id)
+    
+    games = query.all()
+    return jsonify([game.to_dict() for game in games])
 
 @app.route('/api/schedule/<int:game_id>', methods=['GET'])
 def get_game(game_id):
@@ -585,44 +631,38 @@ def get_game(game_id):
 
 @app.route('/api/schedule', methods=['POST'])
 def create_game():
-    """Create a new scheduled game"""
     try:
         data = request.get_json()
-        required_fields = ['team1_id', 'team2_id', 'date', 'time', 'field']
         
-        if not data or not all(field in data for field in required_fields):
-            return jsonify({'error': f'Missing required fields: {", ".join(required_fields)}'}), 400
+        # Validate required fields
+        required_fields = ['team1_id', 'team2_id', 'date', 'time', 'field']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
         
         # Parse date and time
+        date_obj = None
+        time_obj = None
+        
         try:
-            game_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
-            game_time = datetime.strptime(data['time'], '%H:%M').time()
+            date_obj = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            time_obj = datetime.strptime(data['time'], '%H:%M').time()
         except ValueError:
-            return jsonify({'error': 'Invalid date or time format. Use YYYY-MM-DD for date and HH:MM for time'}), 400
-        
-        # Validate team IDs
-        team1_id = int(data['team1_id'])
-        team2_id = int(data['team2_id'])
-        
-        if team1_id == team2_id:
-            return jsonify({'error': 'A team cannot play against itself'}), 400
-            
-        team1 = Team.query.get(team1_id)
-        team2 = Team.query.get(team2_id)
-        
-        if not team1 or not team2:
-            return jsonify({'error': 'One or both teams not found'}), 404
+            return jsonify({"error": "Invalid date or time format. Use YYYY-MM-DD for date and HH:MM for time."}), 400
         
         # Create new game
         new_game = Game(
-            team1_id=team1_id,
-            team2_id=team2_id,
-            date=game_date,
-            time=game_time,
+            team1_id=data['team1_id'],
+            team2_id=data['team2_id'],
+            date=date_obj,
+            time=time_obj,
             field=data['field'],
+            status=data.get('status', 'Scheduled'),
             team1_score=data.get('team1_score'),
             team2_score=data.get('team2_score'),
-            status=data.get('status', 'Scheduled')
+            game_type=data.get('game_type', 'Pool Play'),
+            bracket_match_id=data.get('bracket_match_id'),
+            tournament_id=data.get('tournament_id')
         )
         
         db.session.add(new_game)
@@ -775,15 +815,30 @@ def update_game_score(game_id):
 
 @app.route('/api/settings', methods=['GET'])
 def get_settings():
-    """Get tournament settings"""
     try:
-        # Get the first settings object or create one if it doesn't exist
-        settings = TournamentSettings.query.first()
-        if not settings:
+        tournament_id = request.args.get('tournament_id')
+        
+        # If tournament_id is provided, get settings for that tournament
+        # Otherwise, get the first settings record
+        if tournament_id:
+            settings = TournamentSettings.query.filter_by(tournament_id=tournament_id).first()
+        else:
+            settings = TournamentSettings.query.first()
+            
+        if not settings and tournament_id:
+            # If no settings exist for this tournament, create default settings
+            settings = TournamentSettings(
+                name="Baseball Tournament",
+                tournament_id=tournament_id
+            )
+            db.session.add(settings)
+            db.session.commit()
+        elif not settings:
+            # If no settings exist at all, create default settings
             settings = TournamentSettings(name="Baseball Tournament")
             db.session.add(settings)
             db.session.commit()
-        
+            
         return jsonify(settings.to_dict())
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -793,12 +848,22 @@ def update_settings():
     """Update tournament settings"""
     try:
         data = request.get_json()
+        tournament_id = data.get('tournament_id')
         
-        # Get the first settings object or create one if it doesn't exist
-        settings = TournamentSettings.query.first()
-        if not settings:
-            settings = TournamentSettings()
-            db.session.add(settings)
+        # Get settings for specific tournament if ID provided
+        if tournament_id:
+            settings = TournamentSettings.query.filter_by(tournament_id=tournament_id).first()
+            
+            if not settings:
+                # Create new settings for this tournament if they don't exist
+                settings = TournamentSettings(tournament_id=tournament_id)
+                db.session.add(settings)
+        else:
+            # Fallback to default settings (first record) if no tournament_id provided
+            settings = TournamentSettings.query.first()
+            if not settings:
+                settings = TournamentSettings()
+                db.session.add(settings)
         
         # Update fields if they exist in the request
         if 'name' in data:
@@ -810,6 +875,12 @@ def update_settings():
         # Handle admin password
         if 'adminPassword' in data:
             settings.admin_password = data['adminPassword']
+        elif 'admin_password' in data:  # Support both naming conventions
+            settings.admin_password = data['admin_password']
+        
+        # Update tournament_id if provided and different from current
+        if tournament_id and settings.tournament_id != tournament_id:
+            settings.tournament_id = tournament_id
         
         db.session.commit()
         return jsonify(settings.to_dict())
@@ -840,6 +911,128 @@ def reset_tournament():
         
         db.session.commit()
         return jsonify({"message": "Tournament successfully reset to initial state"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+# Tournament routes
+@app.route('/api/tournaments', methods=['GET'])
+def get_tournaments():
+    try:
+        tournaments = Tournament.query.all()
+        return jsonify([tournament.to_dict() for tournament in tournaments])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/tournaments/<int:tournament_id>', methods=['GET'])
+def get_tournament(tournament_id):
+    try:
+        tournament = Tournament.query.get_or_404(tournament_id)
+        return jsonify(tournament.to_dict())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/tournaments', methods=['POST'])
+def create_tournament():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        # Check if name is present
+        if 'name' not in data:
+            return jsonify({"error": "Tournament name is required"}), 400
+            
+        # Parse dates safely
+        start_date = None
+        end_date = None
+        
+        if data.get('start_date'):
+            try:
+                start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({"error": "Invalid start date format. Use YYYY-MM-DD."}), 400
+                
+        if data.get('end_date'):
+            try:
+                end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({"error": "Invalid end date format. Use YYYY-MM-DD."}), 400
+            
+        # Create new tournament
+        new_tournament = Tournament(
+            name=data['name'],
+            description=data.get('description'),
+            start_date=start_date,
+            end_date=end_date,
+            location=data.get('location'),
+            status=data.get('status', 'Active')
+        )
+        
+        db.session.add(new_tournament)
+        
+        # Create default tournament settings
+        settings = TournamentSettings(
+            name=data.get('name'),
+            description=data.get('description'),
+            admin_password=data.get('admin_password')
+        )
+        new_tournament.settings = settings
+        
+        db.session.commit()
+        return jsonify(new_tournament.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/tournaments/<int:tournament_id>', methods=['PUT'])
+def update_tournament(tournament_id):
+    try:
+        tournament = Tournament.query.get_or_404(tournament_id)
+        data = request.get_json()
+        
+        if 'name' in data:
+            tournament.name = data['name']
+        if 'description' in data:
+            tournament.description = data['description']
+            
+        # Parse dates safely
+        if 'start_date' in data:
+            if data['start_date']:
+                try:
+                    tournament.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
+                except ValueError:
+                    return jsonify({"error": "Invalid start date format. Use YYYY-MM-DD."}), 400
+            else:
+                tournament.start_date = None
+                
+        if 'end_date' in data:
+            if data['end_date']:
+                try:
+                    tournament.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+                except ValueError:
+                    return jsonify({"error": "Invalid end date format. Use YYYY-MM-DD."}), 400
+            else:
+                tournament.end_date = None
+                
+        if 'location' in data:
+            tournament.location = data['location']
+        if 'status' in data:
+            tournament.status = data['status']
+            
+        db.session.commit()
+        return jsonify(tournament.to_dict())
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/tournaments/<int:tournament_id>', methods=['DELETE'])
+def delete_tournament(tournament_id):
+    try:
+        tournament = Tournament.query.get_or_404(tournament_id)
+        db.session.delete(tournament)
+        db.session.commit()
+        return '', 204
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

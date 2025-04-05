@@ -1,7 +1,9 @@
 <script setup>
-import { ref, provide } from 'vue';
+import { ref, provide, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import ToastNotification from './components/ToastNotification.vue'; // Import the component
 import auth from './store/auth';
+import currentTournament from './store/current-tournament';
 
 // Notification State
 const notification = ref({
@@ -9,6 +11,12 @@ const notification = ref({
   message: '',
   type: 'success' // success, error, info
 });
+
+// Get current route
+const route = useRoute();
+
+// Computed property to check if we're on the tournaments list page
+const isOnTournamentsList = computed(() => route.name === 'Tournaments');
 
 // Function to show notification
 const showNotification = (message, type = 'success', duration = 4000) => {
@@ -60,8 +68,23 @@ const handleLogout = () => {
         
         <nav class="main-nav" :class="{ 'mobile-open': mobileMenuOpen }">
           <router-link to="/" class="nav-link" @click="mobileMenuOpen = false">Home</router-link>
-          <router-link to="/admin" class="nav-link admin-link" @click="mobileMenuOpen = false">
+          <!-- Admin button only appears when a tournament is selected and not on tournaments list -->
+          <router-link 
+            v-if="currentTournament.hasSelectedTournament() && !isOnTournamentsList" 
+            to="/admin" 
+            class="nav-link admin-link" 
+            @click="mobileMenuOpen = false"
+          >
             <span class="admin-icon">⚙️</span> Admin
+          </router-link>
+          <!-- Tournament Admin button only appears on the tournaments list page -->
+          <router-link 
+            v-if="isOnTournamentsList" 
+            to="/tournament-admin" 
+            class="nav-link admin-link" 
+            @click="mobileMenuOpen = false"
+          >
+            <span class="admin-icon">🏆</span> Tournament Admin
           </router-link>
           <button v-if="auth.state.isAuthenticated" @click="handleLogout" class="nav-link logout-button">
             <span class="logout-icon">🔒</span> Logout

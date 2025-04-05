@@ -1,8 +1,13 @@
 <template>
   <div class="home-view">
     <header class="page-header">
-      <h1>{{ tournamentName }}</h1>
-      <p class="subtitle">Welcome to the tournament dashboard</p>
+      <div class="header-content">
+        <div class="back-link">
+          <a @click="goBackToTournaments">&larr; All Tournaments</a>
+        </div>
+        <h1>{{ tournamentName }}</h1>
+        <p class="subtitle">Welcome to the tournament dashboard</p>
+      </div>
     </header>
     
     <div class="content-container">
@@ -188,13 +193,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
 import ScheduleTable from '../components/ScheduleTable.vue';
 import ReadOnlyBracketDisplay from '../components/ReadOnlyBracketDisplay.vue';
+import currentTournament from '../store/current-tournament';
 
-// Tournament settings
+const route = useRoute();
+const router = useRouter();
+
+// Tournament ID and data
+const tournamentId = computed(() => route.params.id);
 const tournamentName = ref('Tournament');
+const tournamentData = ref(null);
+const tournamentLoading = ref(true);
+const tournamentError = ref(null);
 
 // Schedule data
 const schedule = ref([]);
@@ -220,17 +234,96 @@ const playedGames = computed(() => {
   ).sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date, newest first
 });
 
-// Fetch tournament settings
-const fetchSettings = async () => {
+// Fetch tournament data
+const fetchTournament = async () => {
+  if (!tournamentId.value) return;
+  
+  tournamentLoading.value = true;
+  tournamentError.value = null;
+  
   try {
-    const response = await api.getSettings();
-    tournamentName.value = response.data.name;
+    const response = await api.getTournament(tournamentId.value);
+    tournamentData.value = response.data;
+    tournamentName.value = tournamentData.value.name;
+    
     // Update the document title
     document.title = `${tournamentName.value} - Rocketpad`;
   } catch (err) {
+    console.error('Error loading tournament:', err);
+    tournamentError.value = 'Failed to load tournament data.';
+    // Fallback to default name if tournament can't be loaded
+    tournamentName.value = 'Tournament';
+  } finally {
+    tournamentLoading.value = false;
+  }
+};
+
+// Fetch tournament settings
+const fetchSettings = async () => {
+  if (!tournamentId.value) return;
+  
+  try {
+    const response = await api.getSettings({ tournament_id: tournamentId.value });
+    // If we already have the tournament name from the tournament data, don't override it
+    if (!tournamentData.value) {
+      tournamentName.value = response.data.name;
+      // Update the document title
+      document.title = `${tournamentName.value} - Rocketpad`;
+    }
+  } catch (err) {
     console.error('Error loading tournament settings:', err);
-    // Fallback to default name if settings can't be loaded
-    tournamentName.value = 'Baseball Tournament';
+    // If we don't already have a name from the tournament data, use the fallback
+    if (!tournamentData.value) {
+      tournamentName.value = 'Baseball Tournament';
+    }
+  }
+};
+
+// Fetch schedule data
+const fetchSchedule = async () => {
+  scheduleLoading.value = true;
+  scheduleError.value = null;
+  
+  try {
+    const response = await api.getSchedule({ tournament_id: tournamentId.value });
+    schedule.value = response.data;
+  } catch (err) {
+    console.error('Error loading schedule:', err);
+    scheduleError.value = 'Failed to load schedule data.';
+  } finally {
+    scheduleLoading.value = false;
+  }
+};
+
+// Fetch rankings data
+const fetchRankings = async () => {
+  rankingsLoading.value = true;
+  rankingsError.value = null;
+  
+  try {
+    const response = await api.getRankings({ tournament_id: tournamentId.value });
+    rankings.value = response.data;
+  } catch (err) {
+    console.error('Error loading rankings:', err);
+    rankingsError.value = 'Failed to load rankings data.';
+  } finally {
+    rankingsLoading.value = false;
+  }
+};
+
+// Fetch bracket data
+const fetchBracket = async () => {
+  bracketLoading.value = true;
+  bracketError.value = null;
+  
+  try {
+    const response = await api.getBracket({ tournament_id: tournamentId.value });
+    bracketData.value = response.data;
+  } catch (err) {
+    console.error('Error loading bracket:', err);
+    bracketError.value = 'Failed to load bracket data.';
+  } finally {
+    bracketLoading.value = false;
   }
 };
 
@@ -252,63 +345,63 @@ const formatDate = (dateString) => {
 // Format time for display
 const formatTime = (timeString) => {
   if (!timeString) return 'TBD';
-  return timeString.substring(0, 5); // Format HH:MM
+  
+  let hours, minutes;
+  if (timeString.includes('T')) {
+    // Full ISO datetime string
+    const date = new Date(timeString);
+    hours = date.getHours();
+    minutes = date.getMinutes();
+  } else if (timeString.includes(':')) {
+    // Simple time string like "14:30:00"
+    [hours, minutes] = timeString.split(':').map(Number);
+  } else {
+    return timeString; // Unknown format, return as is
+  }
+  
+  // Format in 12-hour time with AM/PM
+  const period = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12; // Convert to 12-hour format
+  minutes = minutes.toString().padStart(2, '0');
+  
+  return `${hours}:${minutes} ${period}`;
 };
 
-// Format win percentage for display
+// Format win percentage as a decimal (e.g., 0.750)
 const formatPercentage = (value) => {
-  if (value === undefined || value === null) return '.000';
-  return value.toFixed(3).replace(/^0+/, '');
+  if (value === undefined || value === null) return '0.000';
+  return value.toFixed(3);
 };
 
-// Fetch schedule data
-const fetchSchedule = async () => {
-  scheduleLoading.value = true;
-  try {
-    const response = await api.getSchedule();
-    schedule.value = response.data;
-  } catch (err) {
-    scheduleError.value = 'Error loading schedule data';
-    console.error(err);
-  } finally {
-    scheduleLoading.value = false;
-  }
+// Load all data when the component mounts or tournamentId changes
+const loadAllData = async () => {
+  await fetchTournament();
+  await fetchSettings();
+  await fetchSchedule();
+  await fetchRankings();
+  await fetchBracket();
 };
 
-// Fetch rankings data
-const fetchRankings = async () => {
-  rankingsLoading.value = true;
-  try {
-    const response = await api.getRankings();
-    rankings.value = response.data;
-  } catch (err) {
-    rankingsError.value = 'Error loading rankings data';
-    console.error(err);
-  } finally {
-    rankingsLoading.value = false;
-  }
-};
-
-// Fetch bracket data
-const fetchBracket = async () => {
-  bracketLoading.value = true;
-  try {
-    const response = await api.getBracket();
-    bracketData.value = response.data;
-  } catch (err) {
-    bracketError.value = 'Error loading bracket data';
-    console.error(err);
-  } finally {
-    bracketLoading.value = false;
-  }
-};
+// Watch for changes in the tournament ID
+watch(tournamentId, () => {
+  loadAllData();
+});
 
 onMounted(() => {
-  fetchSettings();
-  fetchSchedule();
-  fetchRankings();
-  fetchBracket();
+  loadAllData();
 });
+
+// Add this function to navigate back to tournaments list
+const goBackToTournaments = () => {
+  // Clear the current tournament selection
+  currentTournament.clearTournament();
+  router.push({ name: 'Tournaments' });
+};
+
+// Update this function to navigate to tournament admin for the specific tournament
+const navigateToTournamentAdmin = () => {
+  router.push({ name: 'TournamentAdmin', params: { id: tournamentId.value } });
+};
 </script>
 
 <style scoped>
@@ -718,7 +811,15 @@ onMounted(() => {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .page-header {
+    flex-direction: column;
+    align-items: center;
     margin-bottom: var(--space-lg);
+  }
+  
+  .header-content, .header-actions {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 0.5rem;
   }
   
   .page-header h1 {
@@ -842,5 +943,43 @@ onMounted(() => {
     min-width: 1.5rem;
     padding: 0.1rem 0.3rem;
   }
+}
+
+/* Add styles for back link */
+.back-link {
+  margin-bottom: 0.5rem;
+}
+
+.back-link a {
+  color: var(--color-primary);
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.back-link a:hover {
+  text-decoration: underline;
+}
+
+/* Admin button styles */
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-btn {
+  background-color: #f0f0f0;
+  color: #555;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.admin-btn:hover {
+  background-color: #e0e0e0;
 }
 </style> 

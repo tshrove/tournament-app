@@ -1,7 +1,7 @@
 <template>
   <div class="admin-view">
     <header class="admin-header">
-      <h1>Tournament Admin Dashboard</h1>
+      <h1>{{ currentTournament.state.name }} Admin Dashboard</h1>
       <p class="subtitle">Manage all aspects of your tournament</p>
     </header>
     
@@ -11,7 +11,7 @@
           <h2>Administrative Functions</h2>
           
           <div class="admin-nav-links">
-            <router-link to="/tournament-settings" class="admin-nav-link">
+            <router-link :to="`/tournament/${currentTournament.state.id}/settings`" class="admin-nav-link">
               <div class="icon-container">⚙️</div>
               <div class="admin-nav-link-content">
                 <h3>Tournament Settings</h3>
@@ -19,7 +19,7 @@
               </div>
             </router-link>
             
-            <router-link to="/manage-teams" class="admin-nav-link">
+            <router-link :to="`/tournament/${currentTournament.state.id}/manage-teams`" class="admin-nav-link">
               <div class="icon-container">👥</div>
               <div class="admin-nav-link-content">
                 <h3>Team Management</h3>
@@ -27,7 +27,7 @@
               </div>
             </router-link>
             
-            <router-link to="/manage-schedule" class="admin-nav-link">
+            <router-link :to="`/tournament/${currentTournament.state.id}/manage-schedule`" class="admin-nav-link">
               <div class="icon-container">📅</div>
               <div class="admin-nav-link-content">
                 <h3>Schedule Management</h3>
@@ -35,7 +35,7 @@
               </div>
             </router-link>
             
-            <router-link to="/game-scoring" class="admin-nav-link">
+            <router-link :to="`/tournament/${currentTournament.state.id}/game-scoring`" class="admin-nav-link">
               <div class="icon-container">🏆</div>
               <div class="admin-nav-link-content">
                 <h3>Game Scoring</h3>
@@ -43,7 +43,7 @@
               </div>
             </router-link>
             
-            <router-link to="/bracket" class="admin-nav-link">
+            <router-link :to="`/tournament/${currentTournament.state.id}/bracket`" class="admin-nav-link">
               <div class="icon-container">🎯</div>
               <div class="admin-nav-link-content">
                 <h3>Bracket Management</h3>
@@ -58,16 +58,16 @@
         <div class="admin-action-card">
           <h2>Quick Actions</h2>
           <div class="action-buttons">
-            <button class="btn btn-primary" @click="navigateTo('/manage-teams')">
+            <button class="btn btn-primary" @click="navigateToTeams">
               Add New Team
             </button>
-            <button class="btn btn-primary" @click="navigateTo('/manage-schedule')">
+            <button class="btn btn-primary" @click="navigateToSchedule">
               Schedule Game
             </button>
-            <button class="btn btn-primary" @click="navigateTo('/game-scoring')">
+            <button class="btn btn-primary" @click="navigateToScoring">
               Update Game Scores
             </button>
-            <button class="btn btn-primary" @click="navigateTo('/tournament-settings')">
+            <button class="btn btn-primary" @click="navigateToSettings">
               Edit Tournament Settings
             </button>
           </div>
@@ -76,7 +76,7 @@
         <div class="admin-action-card">
           <h2>Return to Public View</h2>
           <p>Go back to the public tournament dashboard</p>
-          <router-link to="/" class="btn btn-outline">
+          <router-link :to="`/tournament/${currentTournament.state.id}`" class="btn btn-outline">
             Tournament Dashboard
           </router-link>
         </div>
@@ -86,13 +86,38 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router';
+import { useRouter, onBeforeRouteEnter } from 'vue-router';
+import { onMounted } from 'vue';
+import currentTournament from '../store/current-tournament';
 
 const router = useRouter();
 
-const navigateTo = (path) => {
-  router.push(path);
+// Navigate to tournament-specific routes
+const navigateToTeams = () => {
+  router.push(`/tournament/${currentTournament.state.id}/manage-teams`);
 };
+
+const navigateToSchedule = () => {
+  router.push(`/tournament/${currentTournament.state.id}/manage-schedule`);
+};
+
+const navigateToScoring = () => {
+  router.push(`/tournament/${currentTournament.state.id}/game-scoring`);
+};
+
+const navigateToSettings = () => {
+  router.push(`/tournament/${currentTournament.state.id}/settings`);
+};
+
+onMounted(() => {
+  // If no tournament is selected, redirect to tournaments page
+  if (!currentTournament.hasSelectedTournament()) {
+    router.push('/');
+  }
+  
+  // Set page title to include tournament name
+  document.title = `${currentTournament.state.name} Admin - Rocketpad`;
+});
 </script>
 
 <style scoped>

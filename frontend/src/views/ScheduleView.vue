@@ -64,34 +64,6 @@ const handleEditTime = async ({ gameId, time }) => {
   }
 };
 
-const handleEditTeam = async ({ gameId, teamNum, teamName }) => {
-  try {
-    // We need to get the teams first to find the team ID
-    const teamsResponse = await api.getTeams();
-    const teams = teamsResponse.data;
-    
-    // Find the team ID from the name
-    const team = teams.find(t => t.name === teamName);
-    if (!team) {
-      showNotification(`Team "${teamName}" not found`, 'error');
-      return;
-    }
-    
-    const updateData = {};
-    if (teamNum === 1) {
-      updateData.team1_id = team.id;
-    } else {
-      updateData.team2_id = team.id;
-    }
-    
-    await api.updateScheduledGame(gameId, updateData);
-    showNotification('Team updated successfully', 'success');
-    fetchSchedule(); // Refresh data
-  } catch (err) {
-    showNotification('Error updating team: ' + (err.response?.data?.error || err.message), 'error');
-  }
-};
-
 const handleEditStatus = async ({ gameId, status }) => {
   try {
     await api.updateScheduledGame(gameId, { status });
@@ -138,7 +110,6 @@ onMounted(fetchSchedule);
       @edit-field="handleEditField"
       @edit-date="handleEditDate"
       @edit-time="handleEditTime"
-      @edit-team="handleEditTeam"
       @edit-status="handleEditStatus"
     />
   </div>

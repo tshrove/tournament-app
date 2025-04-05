@@ -20,7 +20,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['delete-game', 'edit-field', 'edit-date', 'edit-time', 'edit-team', 'edit-status']);
+const emit = defineEmits(['delete-game', 'edit-field', 'edit-date', 'edit-time', 'edit-status']);
 
 // Game type filter
 const gameTypeFilter = ref('all');
@@ -90,13 +90,6 @@ const editTime = (gameId, currentTime) => {
   const newTime = prompt('Enter new time (HH:MM):', currentTime);
   if (newTime !== null && newTime !== currentTime) {
     emit('edit-time', { gameId, time: newTime });
-  }
-};
-
-const editTeam = (gameId, teamNum, currentTeam) => {
-  const newTeam = prompt(`Enter new team name for Team ${teamNum}:`, currentTeam);
-  if (newTeam !== null && newTeam !== currentTeam) {
-    emit('edit-team', { gameId, teamNum, teamName: newTeam });
   }
 };
 
@@ -207,17 +200,6 @@ const editStatus = (gameId, currentStatus) => {
                 >
                   {{ game.team1_name }}
                 </span>
-                <button 
-                  v-if="props.isAdmin"
-                  @click="editTeam(game.id, 1, game.team1_name)" 
-                  class="btn-edit" 
-                  title="Edit team 1"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </button>
               </div>
               
               <span v-if="!showScores && game.team1_score !== null && game.team2_score !== null" class="vs-text">vs</span>
@@ -232,17 +214,6 @@ const editStatus = (gameId, currentStatus) => {
                 >
                   {{ game.team2_name }}
                 </span>
-                <button 
-                  v-if="props.isAdmin"
-                  @click="editTeam(game.id, 2, game.team2_name)" 
-                  class="btn-edit" 
-                  title="Edit team 2"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </button>
               </div>
             </div>
           </td>
@@ -428,6 +399,24 @@ const editStatus = (gameId, currentStatus) => {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+}
+
+.team-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  position: relative;
+  padding: var(--space-xs) 0;
+}
+
+.team-container .btn-edit {
+  margin-left: var(--space-xs);
+  opacity: 0.7;
+  transition: opacity var(--transition-fast), background-color var(--transition-fast);
+}
+
+.team-container:hover .btn-edit {
+  opacity: 1;
 }
 
 .team {
@@ -618,12 +607,6 @@ tr.bracket-game:hover {
   height: 14px;
 }
 
-.team-container {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
 @media (max-width: 768px) {
   .schedule-controls {
     flex-direction: column;
@@ -648,11 +631,11 @@ tr.bracket-game:hover {
   }
   
   .schedule-table {
-    display: block; /* Convert from table to block for mobile */
+    display: block;
   }
   
   .schedule-table thead {
-    display: none; /* Hide table headers on mobile */
+    display: none;
   }
   
   .schedule-table tbody {
@@ -680,7 +663,6 @@ tr.bracket-game:hover {
     border-bottom: none;
   }
   
-  /* Add labels for each cell */
   .schedule-table td::before {
     content: attr(data-label);
     float: left;
@@ -688,7 +670,6 @@ tr.bracket-game:hover {
     color: var(--color-text-light);
   }
   
-  /* Specific styling for cards */
   .teams-column {
     border-bottom: 1px solid var(--color-border);
   }
@@ -725,11 +706,20 @@ tr.bracket-game:hover {
   }
   
   .team-container {
-    justify-content: flex-end;
+    justify-content: space-between;
+    width: 100%;
+  }
+  
+  .team-container .team {
+    max-width: 75%;
+  }
+  
+  .team-container .btn-edit {
+    opacity: 1;
+    padding: var(--space-sm);
   }
 }
 
-/* Additional improvements for very small screens */
 @media (max-width: 480px) {
   .filter-options {
     flex-direction: column;

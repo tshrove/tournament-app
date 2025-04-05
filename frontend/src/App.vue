@@ -48,7 +48,7 @@ const handleLogout = () => {
     <header class="app-header">
       <div class="container header-container">
         <div class="logo">
-          <h1>🚀 Launchpad</h1>
+          <h1>🚀 Rocketpad</h1>
         </div>
         
         <!-- Mobile menu toggle -->
@@ -83,7 +83,7 @@ const handleLogout = () => {
     <footer class="app-footer">
       <div class="container">
         <div class="footer-content">
-          <p>&copy; {{ new Date().getFullYear() }} Launchpad</p>
+          <p>&copy; {{ new Date().getFullYear() }} Rocketpad</p>
           <div class="sponsor-badge">
             <span>Developed & Sponsored by</span>
             <a href="https://www.facebook.com/profile.php?id=61561326677708" target="_blank" rel="noopener noreferrer" class="sponsor-name">🚀 Rocket City Rockets</a>

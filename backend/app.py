@@ -48,7 +48,7 @@ def handle_preflight():
 # Basic route
 @app.route('/')
 def index():
-    return jsonify({"message": "Welcome to the Launchpad API!"})
+    return jsonify({"message": "Welcome to the Rocketpad API!"})
 
 # Team routes
 @app.route('/api/teams', methods=['GET'])

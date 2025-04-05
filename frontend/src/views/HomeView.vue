@@ -226,7 +226,7 @@ const fetchSettings = async () => {
     const response = await api.getSettings();
     tournamentName.value = response.data.name;
     // Update the document title
-    document.title = `${tournamentName.value} - Launchpad`;
+    document.title = `${tournamentName.value} - Rocketpad`;
   } catch (err) {
     console.error('Error loading tournament settings:', err);
     // Fallback to default name if settings can't be loaded

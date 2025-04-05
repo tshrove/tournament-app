@@ -56,6 +56,27 @@
         </div>
       </section>
       
+      <section class="settings-section">
+        <div class="settings-card danger-zone">
+          <h2>Danger Zone</h2>
+          <p class="warning-text">These actions cannot be undone. Proceed with caution.</p>
+          
+          <div class="danger-action">
+            <div class="danger-description">
+              <h3>Reset Tournament</h3>
+              <p>This will remove all teams, games, schedules, and bracket data. The tournament will be reset to its initial state.</p>
+            </div>
+            <button 
+              class="btn btn-danger" 
+              @click="confirmReset"
+              :disabled="resetting"
+            >
+              {{ resetting ? 'Resetting...' : 'Reset Tournament' }}
+            </button>
+          </div>
+        </div>
+      </section>
+      
       <div class="actions-container">
         <button @click="navigateToAdmin" class="btn btn-outline">
           Back to Admin Dashboard
@@ -79,6 +100,7 @@ const adminPassword = ref('');
 const saving = ref(false);
 const settingsSaved = ref(false);
 const settingsError = ref('');
+const resetting = ref(false);
 
 // Load tournament settings
 const loadSettings = async () => {
@@ -121,6 +143,28 @@ const saveSettings = async () => {
 
 const navigateToAdmin = () => {
   router.push('/admin');
+};
+
+// Reset tournament
+const confirmReset = () => {
+  if (confirm("WARNING: This will delete all teams, games, and schedules. This action cannot be undone. Are you sure you want to reset the tournament?")) {
+    resetTournament();
+  }
+};
+
+const resetTournament = async () => {
+  resetting.value = true;
+  try {
+    await api.resetTournament();
+    alert("Tournament has been reset successfully.");
+    // Reload settings to reflect changes
+    await loadSettings();
+  } catch (err) {
+    console.error('Error resetting tournament:', err);
+    alert("Failed to reset tournament. Please try again.");
+  } finally {
+    resetting.value = false;
+  }
 };
 
 onMounted(() => {
@@ -282,6 +326,53 @@ onMounted(() => {
   text-align: center;
   margin-top: var(--space-xl);
   margin-bottom: var(--space-xl);
+}
+
+.danger-zone {
+  border: 1px solid var(--color-danger);
+}
+
+.danger-zone h2 {
+  color: var(--color-danger);
+}
+
+.warning-text {
+  color: var(--color-danger);
+  font-weight: 500;
+  margin-bottom: var(--space-md);
+}
+
+.danger-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.danger-description h3 {
+  margin: 0 0 var(--space-xs) 0;
+  color: var(--color-text);
+}
+
+.danger-description p {
+  margin: 0;
+  color: var(--color-text-light);
+}
+
+.btn-danger {
+  background-color: var(--color-danger);
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+.btn-danger:disabled {
+  background-color: #e4606d;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

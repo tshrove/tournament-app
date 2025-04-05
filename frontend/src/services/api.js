@@ -101,5 +101,8 @@ export default {
   },
   updateSettings(settingsData) {
     return apiClient.put('/api/settings', settingsData);
+  },
+  resetTournament() {
+    return apiClient.post('/api/reset');
   }
 }; 

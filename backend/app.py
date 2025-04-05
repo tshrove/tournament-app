@@ -817,5 +817,32 @@ def update_settings():
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
+@app.route('/api/reset', methods=['POST'])
+def reset_tournament():
+    """Reset the entire tournament, clearing all teams, games, brackets, and schedules"""
+    try:
+        # Delete all data in the correct order to avoid foreign key constraints
+        # First, delete all games (both regular and bracket)
+        Game.query.delete()
+        
+        # Delete all bracket matches
+        BracketMatch.query.delete()
+        
+        # Delete all teams
+        Team.query.delete()
+        
+        # Reset tournament settings to default (but keep the record)
+        settings = TournamentSettings.query.first()
+        if settings:
+            settings.name = "Baseball Tournament"
+            settings.description = ""
+            # Keep the admin password as is
+        
+        db.session.commit()
+        return jsonify({"message": "Tournament successfully reset to initial state"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)

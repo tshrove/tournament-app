@@ -2,8 +2,8 @@
   <div class="tournaments-view">
     <header class="page-header">
       <div class="header-content">
-        <h1>Available Tournaments</h1>
-        <p class="subtitle">Select a tournament to view its dashboard</p>
+        <h1>Available Divisions</h1>
+        <p class="subtitle">Select a division to view its dashboard</p>
       </div>
       <!-- Optional: Add actions like Create Tournament if needed -->
       <!-- <div class="header-actions"> -->
@@ -11,12 +11,62 @@
       <!-- </div> -->
     </header>
 
+    <!-- Search and filters section -->
+    <div class="filters-container card">
+      <div class="search-box">
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          placeholder="Search tournaments..." 
+          class="search-input"
+          @input="applyFilters"
+        />
+        <span class="search-icon">🔍</span>
+      </div>
+      
+      <div class="status-filters">
+        <span class="filter-label">Filter by status:</span>
+        <div class="filter-buttons">
+          <button 
+            @click="toggleStatusFilter('all')" 
+            :class="['filter-btn', { active: selectedStatuses.includes('all') }]"
+          >
+            All
+          </button>
+          <button 
+            @click="toggleStatusFilter('upcoming')" 
+            :class="['filter-btn', { active: selectedStatuses.includes('upcoming') }]"
+          >
+            Upcoming
+          </button>
+          <button 
+            @click="toggleStatusFilter('active')" 
+            :class="['filter-btn', { active: selectedStatuses.includes('active') }]"
+          >
+            Active
+          </button>
+          <button 
+            @click="toggleStatusFilter('completed')" 
+            :class="['filter-btn', { active: selectedStatuses.includes('completed') }]"
+          >
+            Completed
+          </button>
+          <button 
+            @click="toggleStatusFilter('cancelled')" 
+            :class="['filter-btn', { active: selectedStatuses.includes('cancelled') }]"
+          >
+            Cancelled
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="content-container">
       <!-- Apply .card styling directly -->
       <section class="card tournaments-section">
         <div class="section-header">
-          <h2>Tournament List</h2>
-          <div class="badge" v-if="tournaments.length > 0">{{ tournaments.length }} Found</div>
+          <h2>Division List</h2>
+          <div class="badge" v-if="filteredTournaments.length > 0">{{ filteredTournaments.length }} Found</div>
         </div>
 
         <div v-if="loading" class="loading-state">
@@ -32,29 +82,41 @@
           <p>No tournaments available at this time.</p>
           <!-- Optional: Add create button here if applicable -->
         </div>
+        
+        <div v-else-if="filteredTournaments.length === 0" class="empty-state">
+          <p>No tournaments match your search criteria.</p>
+          <button class="btn btn-sm btn-outline" @click="resetFilters">Reset Filters</button>
+        </div>
 
         <div v-else class="tournaments-container">
-          <div class="tournaments-grid">
-            <!-- Use a more descriptive class name -->
-            <div v-for="tournament in tournaments" :key="tournament.id" class="tournament-card-item" @click="navigateToTournament(tournament.id)">
-              <div class="tournament-header">
-                <h3>{{ tournament.name }}</h3>
-                <span class="status-pill" :class="getStatusClass(tournament.status)">{{ tournament.status }}</span>
-              </div>
-              <div class="tournament-details">
+          <!-- List view instead of grid -->
+          <div class="tournaments-list">
+            <div 
+              v-for="tournament in filteredTournaments" 
+              :key="tournament.id" 
+              class="tournament-list-item" 
+              @click="navigateToTournament(tournament.id)"
+            >
+              <div class="tournament-list-main">
+                <div class="tournament-name-and-status">
+                  <h3>{{ tournament.name }}</h3>
+                  <span class="status-pill" :class="getStatusClass(tournament.status)">{{ tournament.status }}</span>
+                </div>
                 <p class="tournament-description">{{ tournament.description || 'No description provided.' }}</p>
-                <div class="tournament-metadata">
-                  <div v-if="tournament.location" class="metadata-item">
-                    <span class="icon location">📍</span> <!-- Simple icon -->
-                    <span>{{ tournament.location }}</span>
-                  </div>
-                  <div v-if="tournament.start_date" class="metadata-item">
-                    <span class="icon calendar">📅</span> <!-- Simple icon -->
-                    <span>{{ formatDateRange(tournament.start_date, tournament.end_date) }}</span>
-                  </div>
+              </div>
+              
+              <div class="tournament-list-metadata">
+                <div v-if="tournament.location" class="metadata-item">
+                  <span class="icon location">📍</span>
+                  <span>{{ tournament.location }}</span>
+                </div>
+                <div v-if="tournament.start_date" class="metadata-item">
+                  <span class="icon calendar">📅</span>
+                  <span>{{ formatDateRange(tournament.start_date, tournament.end_date) }}</span>
                 </div>
               </div>
-              <div class="tournament-footer">
+              
+              <div class="tournament-list-actions">
                 <button class="btn btn-sm btn-primary view-btn">View Details</button>
               </div>
             </div>
@@ -66,7 +128,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
 // import auth from '../store/auth'; // Removed if isAdmin is not used
@@ -79,8 +141,68 @@ const tournaments = ref([]);
 const loading = ref(true);
 const error = ref(null);
 
-// Removed isAdmin computed property as it wasn't used in the template
-// const isAdmin = computed(() => auth.state.isAuthenticated);
+// Search and filter state
+const searchQuery = ref('');
+const selectedStatuses = ref(['all']); // Default to 'all'
+
+// Filtered tournaments based on search query and selected statuses
+const filteredTournaments = computed(() => {
+  if (selectedStatuses.value.includes('all') && !searchQuery.value.trim()) {
+    return tournaments.value;
+  }
+  
+  return tournaments.value.filter(tournament => {
+    // Status filtering
+    const statusMatch = selectedStatuses.value.includes('all') || 
+      selectedStatuses.value.includes(tournament.status?.toLowerCase().replace(' ', '-'));
+    
+    // Text search
+    const searchTerms = searchQuery.value.toLowerCase().trim();
+    const textMatch = !searchTerms || 
+      tournament.name?.toLowerCase().includes(searchTerms) || 
+      tournament.description?.toLowerCase().includes(searchTerms) || 
+      tournament.location?.toLowerCase().includes(searchTerms);
+    
+    return statusMatch && textMatch;
+  });
+});
+
+// Filter functions
+const toggleStatusFilter = (status) => {
+  if (status === 'all') {
+    // If 'all' is clicked, reset to only 'all'
+    selectedStatuses.value = ['all'];
+  } else {
+    // Remove 'all' if it's present
+    if (selectedStatuses.value.includes('all')) {
+      selectedStatuses.value = selectedStatuses.value.filter(s => s !== 'all');
+    }
+    
+    // Toggle the selected status
+    if (selectedStatuses.value.includes(status)) {
+      // If it's the last filter, revert to 'all'
+      if (selectedStatuses.value.length === 1) {
+        selectedStatuses.value = ['all'];
+      } else {
+        // Otherwise remove the status
+        selectedStatuses.value = selectedStatuses.value.filter(s => s !== status);
+      }
+    } else {
+      // Add the status
+      selectedStatuses.value.push(status);
+    }
+  }
+};
+
+const applyFilters = () => {
+  // This function can be expanded if we need more complex filter logic
+  // Currently filtering is handled by the computed property
+};
+
+const resetFilters = () => {
+  searchQuery.value = '';
+  selectedStatuses.value = ['all'];
+};
 
 // Fetch tournaments
 const fetchTournaments = async () => {
@@ -160,7 +282,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-xl);
+  margin-bottom: var(--space-md);
   padding-bottom: var(--space-lg);
   border-bottom: 1px solid var(--color-border);
 }
@@ -179,6 +301,90 @@ onMounted(() => {
   font-size: 1.1rem;
   color: var(--color-text-light);
   margin-top: 0;
+}
+
+/* Search and filters styling */
+.filters-container {
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.search-box {
+  position: relative;
+  width: 100%;
+}
+
+.search-input {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  padding-left: calc(var(--space-md) * 2 + 18px); /* Space for the icon */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  background-color: var(--color-background-alt);
+  color: var(--color-text);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  left: var(--space-md);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-light);
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.filter-label {
+  color: var(--color-text-light);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.filter-btn {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-background-alt);
+  color: var(--color-text-light);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.filter-btn:hover {
+  background-color: var(--color-background);
+  border-color: var(--color-primary-light);
+}
+
+.filter-btn.active {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
 }
 
 .content-container {
@@ -258,52 +464,75 @@ onMounted(() => {
 
 .empty-state {
   font-style: normal;
-}
-
-.tournaments-grid {
-  display: grid;
-  /* Responsive columns */
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-  gap: var(--space-lg);
-}
-
-.tournament-card-item {
-  background-color: var(--color-background-card); /* White background */
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  overflow: hidden;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-  cursor: pointer;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* List view styles */
+.tournaments-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.tournament-list-item {
+  display: flex;
+  flex-wrap: wrap;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-background-card);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  cursor: pointer;
   box-shadow: var(--shadow-sm);
 }
 
-.tournament-card-item:hover {
-  transform: translateY(-3px);
+.tournament-list-item:hover {
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
   border-color: var(--color-primary-light);
 }
 
-.tournament-header {
-  padding: var(--space-md);
-  background-color: var(--color-background-alt); /* Subtle header background */
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-sm);
+.tournament-list-main {
+  flex: 1 1 50%;
+  min-width: 300px;
+  padding-right: var(--space-md);
 }
 
-.tournament-header h3 {
+.tournament-name-and-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.tournament-name-and-status h3 {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 600;
   color: var(--color-accent);
-  /* Truncate long names */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.tournament-list-metadata {
+  flex: 1 1 25%;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-left: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+}
+
+.tournament-list-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-md);
 }
 
 .status-pill {
@@ -348,33 +577,17 @@ onMounted(() => {
     border-color: var(--color-border);
 }
 
-.tournament-details {
-  padding: var(--space-md);
-  flex-grow: 1; /* Allows details to fill space */
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md); /* Space between desc and metadata */
-}
-
 .tournament-description {
   color: var(--color-text-light);
   margin: 0;
   line-height: 1.6;
   font-size: 0.9rem;
-  /* Limit to 3 lines */
+  /* Limit to 2 lines */
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-height: calc(1.6 * 0.9rem * 3); /* Reserve space for 3 lines */
-}
-
-.tournament-metadata {
-  margin: 0; /* Reset margin */
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
 }
 
 .metadata-item {
@@ -391,21 +604,10 @@ onMounted(() => {
   line-height: 1;
 }
 
-.tournament-footer {
-  padding: var(--space-sm) var(--space-md); /* Reduced padding */
-  border-top: 1px solid var(--color-border);
-  display: flex;
-  justify-content: flex-end; /* Align button right */
-  background-color: var(--color-background-alt); /* Subtle footer background */
-}
-
 .view-btn {
   /* Uses .btn, .btn-sm, .btn-primary from global styles */
+  white-space: nowrap;
 }
-
-/* Remove redundant/unused styles */
-/* .edit-btn, .admin-actions, .create-tournament-btn, .primary, .admin-btn, .header-actions */
-
 
 @media (max-width: 768px) {
   .page-header {
@@ -420,6 +622,40 @@ onMounted(() => {
     text-align: left;
     margin-bottom: var(--space-md); /* Add space if actions wrap */
   }
+  
+  .tournament-list-item {
+    flex-direction: column;
+  }
+  
+  .tournament-list-main {
+    width: 100%;
+    padding-right: 0;
+    margin-bottom: var(--space-md);
+  }
+  
+  .tournament-list-metadata {
+    width: 100%;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-md) 0;
+    margin-bottom: var(--space-md);
+  }
+  
+  .tournament-list-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .status-filters {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .filter-buttons {
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
@@ -432,8 +668,15 @@ onMounted(() => {
     .section-header h2 {
         font-size: 1.3rem;
     }
-    .tournament-header h3 {
+    .tournament-name-and-status h3 {
         font-size: 1.05rem;
+    }
+    .filter-buttons {
+        gap: var(--space-xs);
+    }
+    .filter-btn {
+        font-size: 0.8rem;
+        padding: var(--space-xxs) var(--space-xs);
     }
 }
 </style> 

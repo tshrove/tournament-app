@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from database import db
-from models import Team, Game, BracketMatch, TournamentSettings, Tournament
+from models import Team, Game, BracketMatch, TournamentSettings, Tournament, TournamentBracketStorage
 from datetime import datetime
 import json
 
@@ -173,73 +173,28 @@ def get_rankings():
 # Bracket endpoint
 @app.route('/brackets', methods=['GET'])
 def get_bracket():
-    """Get the current tournament bracket structure"""
-    try:
-        tournament_id = request.args.get('tournament_id')
-        
-        # Check if we have stored JSON in the tournament settings
-        if tournament_id:
-            settings = TournamentSettings.query.filter_by(tournament_id=tournament_id).first()
-        else:
-            settings = TournamentSettings.query.first()
-            
-        # If settings exist and have bracket_json, return that directly
-        if settings and settings.bracket_json:
+    """DEPRECATED - Use tournament-specific bracket endpoints. 
+       Get the current tournament bracket structure (legacy).
+    """
+    # This endpoint is now less useful as brackets are stored individually.
+    # It might still be used by older parts of the app, so keep it simple.
+    # It could fetch the *first* stored bracket for the tournament, or just return empty.
+    # For now, let's just return an empty structure to avoid breaking things, 
+    # but ideally, the frontend should call the new endpoints.
+    
+    tournament_id = request.args.get('tournament_id')
+    
+    # Return a default empty structure or potentially the first bracket if needed
+    if tournament_id:
+        first_bracket = TournamentBracketStorage.query.filter_by(tournament_id=tournament_id).first()
+        if first_bracket:
             try:
-                return jsonify(json.loads(settings.bracket_json))
+                return jsonify(json.loads(first_bracket.bracket_json))
             except json.JSONDecodeError:
-                # If JSON is invalid, continue to generate from database
-                pass
-        
-        # Get bracket matches with optional tournament filter
-        bracket_matches = BracketMatch.query
-        if tournament_id:
-            bracket_matches = bracket_matches.filter_by(tournament_id=tournament_id)
-            
-        matches = bracket_matches.all()
-        
-        # If no matches, return empty bracket
-        if not matches:
-            return jsonify({"rounds": {}})
-            
-        # Group matches by round
-        rounds = {}
-        for match in matches:
-            round_key = f"round_{match.round_number}"
-            if round_key not in rounds:
-                rounds[round_key] = []
-                
-            # Get team names
-            team1_name = None
-            team2_name = None
-            if match.team1_id:
-                team1 = Team.query.get(match.team1_id)
-                team1_name = team1.name if team1 else None
-            if match.team2_id:
-                team2 = Team.query.get(match.team2_id)
-                team2_name = team2.name if team2 else None
-                
-            match_data = {
-                'id': match.id,
-                'matchId': match.match_display_id,
-                'roundIndex': match.round_number,
-                'team1Id': match.team1_id,
-                'team2Id': match.team2_id,
-                'team1Name': team1_name,
-                'team2Name': team2_name,
-                'team1Score': match.team1_score,
-                'team2Score': match.team2_score,
-                'winnerId': match.winner_id,
-                'team1Seed': match.team1_seed,
-                'team2Seed': match.team2_seed,
-                'status': match.status,
-                'tournament_id': match.tournament_id
-            }
-            rounds[round_key].append(match_data)
-            
-        return jsonify({"rounds": rounds})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+                 return jsonify({"error": "Stored bracket JSON is invalid"}), 500
+
+    # Fallback to empty
+    return jsonify({"rounds": {}}) 
 
 @app.route('/brackets/generate', methods=['POST'])
 def generate_bracket():
@@ -445,54 +400,6 @@ def clear_bracket():
         
         # Return empty bracket structure
         return jsonify({"message": "Tournament bracket cleared successfully", "rounds": {}})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/brackets/save-json', methods=['POST'])
-def save_bracket_json():
-    """Save bracket JSON configuration for a tournament"""
-    try:
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-            
-        bracket_json = data.get('bracket_json')
-        tournament_id = data.get('tournament_id')
-        
-        if not bracket_json:
-            return jsonify({"error": "No bracket JSON provided"}), 400
-            
-        # Validate that the JSON is valid
-        try:
-            json.loads(bracket_json)  # Just check if it's valid JSON
-        except json.JSONDecodeError as e:
-            return jsonify({"error": f"Invalid JSON: {str(e)}"}), 400
-            
-        # Ensure tournament exists if ID provided
-        if tournament_id:
-            tournament = Tournament.query.get(tournament_id)
-            if not tournament:
-                return jsonify({"error": f"Tournament with ID {tournament_id} not found"}), 404
-                
-        # Retrieve or create tournament settings
-        if tournament_id:
-            settings = TournamentSettings.query.filter_by(tournament_id=tournament_id).first()
-            if not settings:
-                settings = TournamentSettings(tournament_id=tournament_id)
-                db.session.add(settings)
-        else:
-            settings = TournamentSettings.query.first()
-            if not settings:
-                settings = TournamentSettings()
-                db.session.add(settings)
-                
-        # Store the JSON string
-        settings.bracket_json = bracket_json
-        
-        db.session.commit()
-        return jsonify({"message": "Bracket JSON saved successfully"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -1100,6 +1007,94 @@ def delete_tournament(tournament_id):
         db.session.delete(tournament)
         db.session.commit()
         return '', 204
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+# --- NEW RESTful Bracket Storage Endpoints --- 
+
+# GET all brackets for a specific tournament
+@app.route('/api/tournaments/<int:tournament_id>/brackets', methods=['GET'])
+def get_tournament_brackets(tournament_id):
+    tournament = Tournament.query.get_or_404(tournament_id)
+    brackets = TournamentBracketStorage.query.filter_by(tournament_id=tournament.id).order_by(TournamentBracketStorage.name).all()
+    return jsonify([bracket.to_dict() for bracket in brackets])
+
+# POST - Create a new bracket for a tournament
+@app.route('/api/tournaments/<int:tournament_id>/brackets', methods=['POST'])
+def create_tournament_bracket(tournament_id):
+    tournament = Tournament.query.get_or_404(tournament_id)
+    data = request.get_json()
+
+    if not data or 'name' not in data or 'bracket_json' not in data:
+        return jsonify({"error": "Missing required fields: name, bracket_json"}), 400
+
+    bracket_json_str = data['bracket_json']
+    bracket_name = data['name']
+
+    # Validate JSON
+    try:
+        json.loads(bracket_json_str)
+    except json.JSONDecodeError as e:
+        return jsonify({"error": f"Invalid JSON: {str(e)}"}), 400
+
+    new_bracket = TournamentBracketStorage(
+        name=bracket_name,
+        bracket_json=bracket_json_str,
+        tournament_id=tournament.id
+    )
+    db.session.add(new_bracket)
+    try:
+        db.session.commit()
+        return jsonify(new_bracket.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+# GET a specific bracket by its ID
+@app.route('/api/brackets/<int:bracket_id>', methods=['GET'])
+def get_single_bracket(bracket_id):
+    bracket = TournamentBracketStorage.query.get_or_404(bracket_id)
+    return jsonify(bracket.to_dict())
+
+# PUT - Update a specific bracket by its ID
+@app.route('/api/brackets/<int:bracket_id>', methods=['PUT'])
+def update_bracket(bracket_id):
+    bracket = TournamentBracketStorage.query.get_or_404(bracket_id)
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    if 'name' in data:
+        bracket.name = data['name']
+    
+    if 'bracket_json' in data:
+        bracket_json_str = data['bracket_json']
+        # Validate JSON
+        try:
+            json.loads(bracket_json_str)
+            bracket.bracket_json = bracket_json_str
+        except json.JSONDecodeError as e:
+            return jsonify({"error": f"Invalid JSON: {str(e)}"}), 400
+    
+    bracket.updated_at = datetime.now()
+    
+    try:
+        db.session.commit()
+        return jsonify(bracket.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+# DELETE a specific bracket by its ID
+@app.route('/api/brackets/<int:bracket_id>', methods=['DELETE'])
+def delete_bracket(bracket_id):
+    bracket = TournamentBracketStorage.query.get_or_404(bracket_id)
+    try:
+        db.session.delete(bracket)
+        db.session.commit()
+        return jsonify({"message": f"Bracket '{bracket.name}' deleted successfully"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

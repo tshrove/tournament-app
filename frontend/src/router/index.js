@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import TeamManagementView from '../views/TeamManagementView.vue'
 import BracketView from '../views/BracketView.vue'
+import PublicBracketView from '../views/PublicBracketView.vue'
 import ScheduleView from '../views/ScheduleView.vue'
 import ManageScheduleView from '../views/ManageScheduleView.vue'
 import AdminView from '../views/AdminView.vue'
@@ -118,6 +119,13 @@ const routes = [
     name: 'TournamentSettings',
     component: TournamentSettingsView,
     meta: { isAdmin: true },
+    props: true
+  },
+  {
+    path: '/tournament/:id/brackets',
+    name: 'PublicBrackets',
+    component: PublicBracketView,
+    meta: { isPublic: true },
     props: true
   }
 ]

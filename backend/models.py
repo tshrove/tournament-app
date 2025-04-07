@@ -1,6 +1,28 @@
 from database import db
 from datetime import datetime
 
+# New Model for Storing Brackets
+class TournamentBracketStorage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False, default="My Bracket")
+    bracket_json = db.Column(db.Text, nullable=False)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+    def __repr__(self):
+        return f'<TournamentBracketStorage {self.id} - {self.name}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'bracket_json': self.bracket_json,
+            'tournament_id': self.tournament_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 class Tournament(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -17,6 +39,7 @@ class Tournament(db.Model):
     games = db.relationship('Game', backref='tournament', lazy=True, cascade="all, delete-orphan")
     bracket_matches = db.relationship('BracketMatch', backref='tournament', lazy=True, cascade="all, delete-orphan")
     settings = db.relationship('TournamentSettings', backref='tournament', lazy=True, cascade="all, delete-orphan", uselist=False)
+    stored_brackets = db.relationship('TournamentBracketStorage', backref='tournament', lazy=True, cascade="all, delete-orphan")
     
     def __repr__(self):
         return f'<Tournament {self.name}>'
@@ -153,7 +176,6 @@ class TournamentSettings(db.Model):
     name = db.Column(db.String(100), nullable=False, default="Baseball Tournament")
     description = db.Column(db.String(500), nullable=True)
     admin_password = db.Column(db.String(100), nullable=True)
-    bracket_json = db.Column(db.Text, nullable=True)  # Store full bracket as JSON string
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=True)
     
@@ -166,7 +188,6 @@ class TournamentSettings(db.Model):
             'name': self.name,
             'description': self.description,
             'adminPassword': self.admin_password,
-            'bracket_json': self.bracket_json,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'tournament_id': self.tournament_id
         }

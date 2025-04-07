@@ -90,26 +90,32 @@
       </section>
       
       <!-- Tournament Bracket Section -->
-      <section class="card bracket-section">
+      <section class="section bracket-section card">
         <div class="section-header">
-          <h3>Tournament Bracket</h3>
+          <h2>Bracket</h2>
+          <router-link 
+              v-if="hasBrackets" 
+              :to="{ name: 'PublicBrackets', params: { id: tournamentId } }" 
+              class="btn btn-outline-secondary btn-sm"
+           >
+             View All Brackets
+           </router-link>
         </div>
-        
-        <div v-if="bracketLoading" class="loading-state">
-          <div class="loading-spinner"></div>
-          <p>Loading tournament bracket...</p>
+        <div v-if="loadingFirstBracket" class="loading-indicator">Loading bracket...</div>
+        <div v-else-if="firstBracketError" class="error-message">
+          {{ firstBracketError }}
         </div>
-        
-        <div v-else-if="bracketError" class="error-state">
-          <p>{{ bracketError }}</p>
+        <div v-else-if="!hasBrackets" class="no-data-message">
+          No brackets have been set up for this tournament yet.
         </div>
-        
-        <div v-else-if="!bracketData || !bracketData.rounds || Object.keys(bracketData.rounds).length === 0" class="empty-state">
-          <p>Tournament bracket has not been generated yet.</p>
+        <div v-else-if="!firstBracketData" class="no-data-message">
+           Could not load data for the primary bracket ({{ firstBracketName }}).
         </div>
-        
-        <div v-else class="bracket-container">
-          <ReadOnlyBracketDisplay :bracketData="bracketData" />
+        <div v-else class="bracket-display-container">
+           <h3>{{ firstBracketName }}</h3>
+           <div class="tournament-bracket-wrapper">
+               <TournamentBracket :rounds="firstBracketData" />
+           </div>
         </div>
       </section>
       
@@ -201,6 +207,8 @@ import api from '../services/api';
 import ScheduleTable from '../components/ScheduleTable.vue';
 import ReadOnlyBracketDisplay from '../components/ReadOnlyBracketDisplay.vue';
 import currentTournament from '../store/current-tournament';
+import TournamentBracket from '../components/TournamentBracket.vue';
+import RankingsTable from '../components/RankingsTable.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -227,6 +235,13 @@ const bracketData = ref(null);
 const bracketLoading = ref(true);
 const bracketError = ref(null);
 
+// New refs for first bracket
+const firstBracketData = ref(null);
+const loadingFirstBracket = ref(false);
+const firstBracketError = ref(null);
+const firstBracketName = ref("");
+const hasBrackets = ref(false);
+
 // Computed property to filter played games
 const playedGames = computed(() => {
   return schedule.value.filter(game => 
@@ -235,6 +250,45 @@ const playedGames = computed(() => {
     game.status === 'Completed'
   ).sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date, newest first
 });
+
+// Transformation function
+const transformToVueTournamentFormat = (data) => {
+  if (!data || !data.rounds) {
+    console.warn("Transform input data is missing 'rounds' in HomeView");
+    return null;
+  }
+  if (Array.isArray(data.rounds) && data.rounds.length > 0 && data.rounds[0].matchs) {
+    return data.rounds;
+  }
+  const transformed = [];
+  if (typeof data.rounds === "object") {
+    const roundKeys = Object.keys(data.rounds).sort();
+    roundKeys.forEach((roundKey, roundIndex) => {
+      const roundData = { matchs: [] };
+      if (Array.isArray(data.rounds[roundKey])) {
+         data.rounds[roundKey].forEach((match, matchIndex) => {
+            const vueTournamentMatch = {
+              id: match.matchId || match.id || `match_${roundIndex}_${matchIndex}`,
+              winner: match.winnerId || match.winner || null,
+              team1: {
+                id: String(match.team1Id || (match.player1 ? match.player1.id : match.team1?.id || null)),
+                name: match.team1Name || (match.player1 ? match.player1.name : match.team1?.name || "TBD"),
+                score: match.team1Score !== undefined ? match.team1Score : (match.player1 ? match.player1.score : match.team1?.score)
+              },
+              team2: {
+                id: String(match.team2Id || (match.player2 ? match.player2.id : match.team2?.id || null)),
+                name: match.team2Name || (match.player2 ? match.player2.name : match.team2?.name || "TBD"),
+                score: match.team2Score !== undefined ? match.team2Score : (match.player2 ? match.player2.score : match.team2?.score)
+              },
+            };
+             roundData.matchs.push(vueTournamentMatch);
+         });
+      }
+      transformed.push(roundData);
+    });
+  }
+  return transformed;
+};
 
 // Fetch tournament data
 const fetchTournament = async () => {
@@ -329,6 +383,44 @@ const fetchBracket = async () => {
   }
 };
 
+// Fetch the first bracket
+const fetchFirstBracket = async () => {
+  if (!tournamentId.value) return;
+  loadingFirstBracket.value = true;
+  firstBracketError.value = null;
+  firstBracketData.value = null;
+  firstBracketName.value = "";
+  hasBrackets.value = false;
+
+  try {
+    const response = await api.getTournamentBrackets(tournamentId.value);
+    const brackets = response.data || [];
+    if (brackets.length > 0) {
+      hasBrackets.value = true;
+      const firstBracket = brackets[0];
+      firstBracketName.value = firstBracket.name;
+      try {
+        const parsedJson = JSON.parse(firstBracket.bracket_json);
+        firstBracketData.value = transformToVueTournamentFormat(parsedJson);
+        if (!firstBracketData.value) {
+            firstBracketError.value = `Failed to parse or transform data for bracket: ${firstBracket.name}.`;
+        }
+      } catch (parseError) {
+        console.error("Error parsing first bracket JSON:", parseError);
+        firstBracketError.value = `Error loading data for bracket: ${firstBracket.name}. Invalid JSON.`;
+      }
+    } else {
+      // No brackets found for this tournament
+      console.log("No brackets found for tournament", tournamentId.value);
+    }
+  } catch (err) {
+    console.error("Error fetching brackets list for HomeView:", err);
+    firstBracketError.value = "Could not load bracket information.";
+  } finally {
+    loadingFirstBracket.value = false;
+  }
+};
+
 // Format date for display
 const formatDate = (dateString) => {
   if (!dateString) return 'TBD';
@@ -382,6 +474,7 @@ const loadAllData = async () => {
   await fetchSchedule();
   await fetchRankings();
   await fetchBracket();
+  await fetchFirstBracket();
 };
 
 // Watch for changes in the tournament ID
@@ -405,6 +498,13 @@ const goBackToTournaments = () => {
   currentTournament.clearTournament();
   router.push({ name: 'Tournaments' });
 };
+
+onMounted(() => {
+  document.title = `${tournamentName.value} - Home`;
+  fetchSchedule();
+  fetchRankings();
+  fetchFirstBracket(); // Fetch bracket data on mount
+});
 </script>
 
 <style scoped>

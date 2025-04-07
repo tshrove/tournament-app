@@ -125,5 +125,46 @@ export default {
   },
   resetTournament(tournamentId) {
     return apiClient.post('/api/reset', { tournament_id: tournamentId });
-  }
+  },
+
+  // --- Bracket Storage Endpoints ---
+  getTournamentBrackets(tournamentId) {
+    return apiClient.get(`/api/tournaments/${tournamentId}/brackets`);
+  },
+
+  getBracketById(bracketId) {
+    return apiClient.get(`/api/brackets/${bracketId}`);
+  },
+
+  createBracket(tournamentId, name, bracketJson) {
+    return apiClient.post(`/api/tournaments/${tournamentId}/brackets`, {
+      name: name,
+      bracket_json: bracketJson
+    });
+  },
+
+  updateBracket(bracketId, name, bracketJson) {
+    const payload = {};
+    if (name !== undefined) payload.name = name;
+    if (bracketJson !== undefined) payload.bracket_json = bracketJson;
+    return apiClient.put(`/api/brackets/${bracketId}`, payload);
+  },
+
+  deleteBracket(bracketId) {
+    return apiClient.delete(`/api/brackets/${bracketId}`);
+  },
+
+  // --- Legacy/Deprecated Bracket Endpoints (May need cleanup later) ---
+  getBracket(params) {
+    // DEPRECATED: Use getTournamentBrackets or getBracketById
+    console.warn("Using deprecated getBracket endpoint");
+    return apiClient.get('/brackets', { params }); 
+  },
+  saveBracketJson(bracketData) {
+    // DEPRECATED: Use createBracket or updateBracket
+    console.error("Using deprecated saveBracketJson endpoint. Use create/update instead.");
+    // Returning a rejected promise to prevent accidental usage
+    return Promise.reject("Deprecated: Use createBracket or updateBracket");
+    // return apiClient.post('/brackets/save-json', bracketData); // Old call
+  },
 }; 

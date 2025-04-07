@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, inject } from 'vue';
 import api from '../services/api';
+import currentTournament from '../store/current-tournament';
 import ScheduleTable from '../components/ScheduleTable.vue';
 
 const schedule = ref([]);
@@ -8,11 +9,24 @@ const loading = ref(true);
 const error = ref(null);
 const showNotification = inject('showNotification');
 
+// Check if tournament is selected
+const isTournamentSelected = () => {
+  return currentTournament.hasSelectedTournament();
+};
+
 // Fetch schedule data
 const fetchSchedule = async () => {
+  if (!isTournamentSelected()) {
+    schedule.value = [];
+    loading.value = false;
+    return;
+  }
+  
   loading.value = true;
   try {
-    const response = await api.getSchedule();
+    const response = await api.getSchedule({ 
+      tournament_id: currentTournament.state.id 
+    });
     schedule.value = response.data;
   } catch (err) {
     error.value = 'Error loading schedule: ' + (err.response?.data?.error || err.message);
@@ -81,37 +95,48 @@ onMounted(fetchSchedule);
   <div class="schedule-view">
     <h1>Game Schedule</h1>
     
-    <div class="schedule-actions">
-      <router-link to="/manage-schedule" class="btn-primary">
-        Manage Schedule
-      </router-link>
+    <div v-if="!isTournamentSelected()" class="no-tournament-warning">
+      <p>Please select a tournament first to view its schedule.</p>
+      <router-link to="/" class="btn btn-primary">Go to Tournament Selection</router-link>
     </div>
     
-    <div v-if="loading" class="loading">
-      Loading schedule...
+    <div v-else>
+      <div v-if="currentTournament.state.name" class="tournament-info">
+        <p>Viewing schedule for: <strong>{{ currentTournament.state.name }}</strong></p>
+      </div>
+      
+      <div class="schedule-actions">
+        <router-link to="/manage-schedule" class="btn-primary">
+          Manage Schedule
+        </router-link>
+      </div>
+      
+      <div v-if="loading" class="loading">
+        Loading schedule...
+      </div>
+      
+      <div v-else-if="error" class="error">
+        {{ error }}
+      </div>
+      
+      <div v-else-if="schedule.length === 0" class="empty-state">
+        <p>No games scheduled for this tournament yet.</p>
+        <router-link to="/manage-schedule" class="btn-secondary">
+          Add Games to Schedule
+        </router-link>
+      </div>
+      
+      <ScheduleTable 
+        v-else 
+        :games="schedule" 
+        :isAdmin="true"
+        @delete-game="handleDeleteGame"
+        @edit-field="handleEditField"
+        @edit-date="handleEditDate"
+        @edit-time="handleEditTime"
+        @edit-status="handleEditStatus"
+      />
     </div>
-    
-    <div v-else-if="error" class="error">
-      {{ error }}
-    </div>
-    
-    <div v-else-if="schedule.length === 0" class="empty-state">
-      <p>No games scheduled yet.</p>
-      <router-link to="/manage-schedule" class="btn-secondary">
-        Add Games to Schedule
-      </router-link>
-    </div>
-    
-    <ScheduleTable 
-      v-else 
-      :games="schedule" 
-      :isAdmin="true"
-      @delete-game="handleDeleteGame"
-      @edit-field="handleEditField"
-      @edit-date="handleEditDate"
-      @edit-time="handleEditTime"
-      @edit-status="handleEditStatus"
-    />
   </div>
 </template>
 
@@ -133,50 +158,75 @@ h1 {
   margin-bottom: 1.5rem;
 }
 
-.btn-primary {
-  background-color: #42b983;
-  color: white;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  text-decoration: none;
-  font-weight: bold;
-  transition: background-color 0.3s;
-}
-
-.btn-primary:hover {
-  background-color: #3aa876;
-}
-
-.btn-secondary {
-  background-color: #606c76;
-  color: white;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  text-decoration: none;
-  font-weight: bold;
-  transition: background-color 0.3s;
-}
-
-.btn-secondary:hover {
-  background-color: #4e5a63;
-}
-
-.loading, .error, .empty-state {
-  padding: 2rem;
+.loading {
   text-align: center;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  margin: 1rem 0;
+  padding: 2rem 0;
+  color: #666;
 }
 
 .error {
-  color: #dc3545;
+  color: #e74c3c;
+  background-color: #fad7d7;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  margin: 1rem 0;
 }
 
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
+  text-align: center;
+  padding: 2rem 0;
+  color: #7f8c8d;
+}
+
+.btn-primary, .btn-secondary {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.btn-primary {
+  background-color: #2980b9;
+  color: white;
+}
+
+.btn-secondary {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #3498db;
+}
+
+.btn-secondary:hover {
+  background-color: #7f8c8d;
+}
+
+.tournament-info {
+  width: 100%;
+  background-color: #e7f5ff;
+  border: 1px solid #a5d8ff;
+  color: #0c63e4;
+  padding: 10px 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.no-tournament-warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffecb5;
+  color: #856404;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.no-tournament-warning p {
+  margin-bottom: 15px;
 }
 </style> 

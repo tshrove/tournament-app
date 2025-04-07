@@ -2,6 +2,7 @@
 import { ref, onMounted, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
+import currentTournament from '../store/current-tournament';
 import ScheduleTable from '../components/ScheduleTable.vue';
 // Import flatpickr
 import flatPickr from 'vue-flatpickr-component';
@@ -24,7 +25,8 @@ const newGame = ref({
   time: '',
   field: '',
   status: 'Scheduled',
-  game_type: 'Pool Play' // Default to Pool Play
+  game_type: 'Pool Play', // Default to Pool Play
+  tournament_id: null
 });
 
 // Flatpickr options
@@ -47,13 +49,32 @@ const gameTypeOptions = [
   { value: 'Bracket', label: 'Bracket' }
 ];
 
+// Check if tournament is selected
+const isTournamentSelected = () => {
+  if (!currentTournament.hasSelectedTournament()) {
+    showNotification('Please select a tournament first.', 'error');
+    return false;
+  }
+  return true;
+};
+
 // Load teams and schedule data
 const loadData = async () => {
+  if (!isTournamentSelected()) {
+    teams.value = [];
+    schedule.value = [];
+    loading.value = false;
+    return;
+  }
+
+  const tournamentId = currentTournament.state.id;
+  newGame.value.tournament_id = tournamentId;
+  
   loading.value = true;
   try {
     const [teamsResponse, scheduleResponse] = await Promise.all([
-      api.getTeams(),
-      api.getSchedule()
+      api.getTeams({ tournament_id: tournamentId }),
+      api.getSchedule({ tournament_id: tournamentId })
     ]);
     teams.value = teamsResponse.data;
     schedule.value = scheduleResponse.data;
@@ -67,6 +88,11 @@ const loadData = async () => {
 // Validate form fields
 const validateForm = () => {
   errors.value = {};
+  
+  if (!currentTournament.hasSelectedTournament()) {
+    errors.value.general = 'No tournament selected. Please select a tournament first.';
+    return false;
+  }
   
   if (!newGame.value.team1_id) {
     errors.value.team1_id = 'Please select the first team';
@@ -96,8 +122,14 @@ const validateForm = () => {
 // Add a new game to the schedule
 const addGame = async () => {
   if (!validateForm()) {
+    if (errors.value.general) {
+      showNotification(errors.value.general, 'error');
+    }
     return;
   }
+  
+  // Ensure tournament_id is set
+  newGame.value.tournament_id = currentTournament.state.id;
   
   try {
     await api.createScheduledGame(newGame.value);
@@ -118,7 +150,8 @@ const resetForm = () => {
     time: '',
     field: '',
     status: 'Scheduled',
-    game_type: 'Pool Play'
+    game_type: 'Pool Play',
+    tournament_id: currentTournament.state.id
   };
   errors.value = {};
   showForm.value = false;
@@ -127,13 +160,6 @@ const resetForm = () => {
 // Delete a game from the schedule
 const handleDeleteGame = async (gameId) => {
   try {
-    // Find the game to check if it's a bracket game
-    const gameToDelete = schedule.value.find(game => game.id === gameId);
-    if (gameToDelete && gameToDelete.game_type === 'Bracket') {
-      showNotification('Cannot delete bracket games directly. Use the Bracket Management page instead.', 'error');
-      return;
-    }
-    
     await api.deleteScheduledGame(gameId);
     showNotification('Game removed from schedule', 'success');
     loadData(); // Refresh data
@@ -196,6 +222,7 @@ onMounted(loadData);
           v-if="!showForm" 
           @click="showForm = true" 
           class="btn btn-primary"
+          :disabled="!currentTournament.hasSelectedTournament()"
         >
           <i class="icon">+</i> Add New Game
         </button>
@@ -212,9 +239,20 @@ onMounted(loadData);
       </div>
     </div>
     
+    <!-- Tournament Info -->
+    <div v-if="currentTournament.hasSelectedTournament()" class="tournament-info">
+      <p>Managing schedule for: <strong>{{ currentTournament.state.name }}</strong></p>
+    </div>
+    
+    <!-- No Tournament Warning -->
+    <div v-if="!currentTournament.hasSelectedTournament()" class="no-tournament-warning">
+      <p>Please select a tournament first to manage its schedule.</p>
+      <router-link to="/" class="btn btn-primary">Go to Tournament Selection</router-link>
+    </div>
+    
     <!-- Game Form -->
     <transition name="slide-fade">
-      <div v-if="showForm" class="card game-form">
+      <div v-if="showForm && currentTournament.hasSelectedTournament()" class="card game-form">
         <h2 class="card-title">Add New Game</h2>
         <form @submit.prevent="addGame">
           <div class="form-section">
@@ -344,10 +382,14 @@ onMounted(loadData);
       <p>Loading data...</p>
     </div>
     
+    <div v-else-if="!currentTournament.hasSelectedTournament()" class="empty-state card">
+      <!-- This is shown when no tournament is selected, handled by no-tournament-warning above -->
+    </div>
+    
     <div v-else-if="schedule.length === 0" class="empty-state card">
       <div class="empty-icon">📅</div>
       <h2>No Games Scheduled</h2>
-      <p>There are no games in the schedule yet. Get started by adding your first game.</p>
+      <p>There are no games in the schedule for {{ currentTournament.state.name }} yet. Get started by adding your first game.</p>
       <button @click="showForm = true" class="btn btn-primary btn-lg">
         <i class="icon">+</i> Add Your First Game
       </button>
@@ -355,7 +397,7 @@ onMounted(loadData);
     
     <div v-else class="schedule-container">
       <div class="card">
-        <h2 class="card-title">Current Schedule</h2>
+        <h2 class="card-title">Current Schedule for {{ currentTournament.state.name }}</h2>
         <div class="schedule-note">
           <p><strong>Note:</strong> Bracket games are managed through the <router-link to="/bracket">Bracket Management</router-link> page and cannot be deleted directly from here.</p>
         </div>
@@ -398,6 +440,34 @@ onMounted(loadData);
   display: inline-block;
   margin-right: var(--space-xs);
   font-style: normal;
+}
+
+/* Tournament Info styles */
+.tournament-info {
+  width: 100%;
+  background-color: #e7f5ff;
+  border: 1px solid #a5d8ff;
+  color: #0c63e4;
+  padding: 10px 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  text-align: center;
+  margin-bottom: var(--space-lg);
+}
+
+.no-tournament-warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffecb5;
+  color: #856404;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 20px 0;
+  margin-bottom: var(--space-xl);
+}
+
+.no-tournament-warning p {
+  margin-bottom: 15px;
 }
 
 /* Form styling */

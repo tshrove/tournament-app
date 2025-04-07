@@ -4,7 +4,16 @@
     <p v-if="loading">Loading teams...</p>
     <p v-if="error" class="error-message">{{ error }}</p>
 
-    <div class="management-layout">
+    <div v-if="!currentTournament.hasSelectedTournament()" class="no-tournament-warning">
+      <p>Please select a tournament first to manage its teams.</p>
+      <router-link to="/" class="btn btn-primary">Go to Tournament Selection</router-link>
+    </div>
+
+    <div v-else class="management-layout">
+      <div v-if="currentTournament.state.name" class="tournament-info">
+        <p>Managing teams for: <strong>{{ currentTournament.state.name }}</strong></p>
+      </div>
+      
       <div class="form-column">
         <AddTeamForm @team-added="refreshTeams" />
       </div>
@@ -17,25 +26,37 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import AddTeamForm from '../components/AddTeamForm.vue';
 import TeamList from '../components/TeamList.vue';
 import api from '../services/api';
+import currentTournament from '../store/current-tournament';
 
 const teams = ref([]);
 const loading = ref(false);
 const error = ref(null);
+const showNotification = inject('showNotification');
 
 const fetchTeams = async () => {
+  if (!currentTournament.hasSelectedTournament()) {
+    teams.value = [];
+    return;
+  }
+  
   loading.value = true;
   error.value = null;
   try {
-    const response = await api.getTeams();
+    const response = await api.getTeams({ 
+      tournament_id: currentTournament.state.id 
+    });
     // Sort teams alphabetically for display in list/dropdowns
     teams.value = response.data.sort((a, b) => a.name.localeCompare(b.name));
   } catch (err) {
     console.error("Error fetching teams:", err);
     error.value = 'Failed to load teams. Please ensure the backend server is running.';
+    if (showNotification) {
+      showNotification('Failed to load teams for the selected tournament.', 'error');
+    }
   } finally {
     loading.value = false;
   }
@@ -86,5 +107,30 @@ h1 {
   color: red;
   text-align: center;
   margin-bottom: 15px;
+}
+
+.no-tournament-warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffecb5;
+  color: #856404;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.no-tournament-warning p {
+  margin-bottom: 15px;
+}
+
+.tournament-info {
+  width: 100%;
+  background-color: #e7f5ff;
+  border: 1px solid #a5d8ff;
+  color: #0c63e4;
+  padding: 10px 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  text-align: center;
 }
 </style> 

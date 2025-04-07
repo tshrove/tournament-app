@@ -153,6 +153,7 @@ class TournamentSettings(db.Model):
     name = db.Column(db.String(100), nullable=False, default="Baseball Tournament")
     description = db.Column(db.String(500), nullable=True)
     admin_password = db.Column(db.String(100), nullable=True)
+    bracket_json = db.Column(db.Text, nullable=True)  # Store full bracket as JSON string
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=True)
     
@@ -165,6 +166,7 @@ class TournamentSettings(db.Model):
             'name': self.name,
             'description': self.description,
             'adminPassword': self.admin_password,
+            'bracket_json': self.bracket_json,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'tournament_id': self.tournament_id
         }

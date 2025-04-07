@@ -74,10 +74,14 @@ export default {
     return apiClient.get('/api/teams', { params });
   },
   getBracket(params) {
+    // Ensure tournament_id is passed in the params
     return apiClient.get('/brackets', { params });
   },
   updateBracketMatch(matchId, scoreData) {
     return apiClient.patch(`/brackets/match/${matchId}`, scoreData);
+  },
+  saveBracketJson(bracketData) {
+    return apiClient.post('/brackets/save-json', bracketData);
   },
   generateBracket(tournamentId) {
     return apiClient.post('/brackets/generate', { tournament_id: tournamentId });

@@ -3,84 +3,97 @@
     <h1>Game Scoring Management</h1>
     <p class="subtitle">Update scores for completed games</p>
     
-    <div class="filter-controls">
-      <div class="filter-group">
-        <label for="status-filter">Filter by Status:</label>
-        <select id="status-filter" v-model="statusFilter" class="filter-select">
-          <option value="all">All Games</option>
-          <option value="Scheduled">Scheduled</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Completed">Completed</option>
-        </select>
+    <!-- No tournament selected warning -->
+    <div v-if="!isTournamentSelected" class="no-tournament-warning">
+      <p>Please select a tournament first to manage game scores.</p>
+      <router-link to="/" class="btn-primary">Go to Tournament Selection</router-link>
+    </div>
+    
+    <div v-else>
+      <!-- Tournament context banner -->
+      <div class="tournament-info">
+        <p>Managing scores for: <strong>{{ currentTournament.state.name }}</strong></p>
       </div>
       
-      <div class="filter-group">
-        <label for="date-filter">Filter by Date:</label>
-        <input type="date" id="date-filter" v-model="dateFilter" class="filter-date">
+      <div class="filter-controls">
+        <div class="filter-group">
+          <label for="status-filter">Filter by Status:</label>
+          <select id="status-filter" v-model="statusFilter" class="filter-select">
+            <option value="all">All Games</option>
+            <option value="Scheduled">Scheduled</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="date-filter">Filter by Date:</label>
+          <input type="date" id="date-filter" v-model="dateFilter" class="filter-date">
+        </div>
+        
+        <button @click="clearFilters" class="btn-secondary">Clear Filters</button>
       </div>
       
-      <button @click="clearFilters" class="btn-secondary">Clear Filters</button>
-    </div>
-    
-    <div v-if="loading" class="loading-state">
-      <div class="loading-spinner"></div>
-      <p>Loading games...</p>
-    </div>
-    
-    <div v-else-if="error" class="error-state">
-      <p>{{ error }}</p>
-    </div>
-    
-    <div v-else-if="filteredGames.length === 0" class="empty-state">
-      <p>No games match your filters.</p>
-    </div>
-    
-    <div v-else class="games-container">
-      <table class="games-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Time</th>
-            <th>Teams</th>
-            <th>Status</th>
-            <th>Score</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="game in filteredGames" :key="game.id" :class="{ 'completed': game.status === 'Completed' }">
-            <td>{{ formatDate(game.date) }}</td>
-            <td>{{ formatTime(game.time) }}</td>
-            <td class="teams-column">
-              <span class="team">{{ game.team1_name }}</span>
-              <span class="vs">vs</span>
-              <span class="team">{{ game.team2_name }}</span>
-            </td>
-            <td>
-              <span class="status-badge" :class="game.status.toLowerCase().replace(' ', '-')">
-                {{ game.status }}
-              </span>
-            </td>
-            <td class="score-column">
-              <template v-if="game.team1_score !== null && game.team2_score !== null">
-                <span>{{ game.team1_score }} - {{ game.team2_score }}</span>
-              </template>
-              <template v-else>
-                <span class="no-score">Not scored</span>
-              </template>
-            </td>
-            <td class="actions-column">
-              <button 
-                class="btn-edit"
-                @click="openScoreModal(game)"
-                :disabled="isEditingScores"
-              >
-                {{ game.team1_score !== null ? 'Update Score' : 'Add Score' }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-if="loading" class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Loading games...</p>
+      </div>
+      
+      <div v-else-if="error" class="error-state">
+        <p>{{ error }}</p>
+      </div>
+      
+      <div v-else-if="filteredGames.length === 0" class="empty-state">
+        <p>No games match your filters.</p>
+      </div>
+      
+      <div v-else class="games-container">
+        <table class="games-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Teams</th>
+              <th>Status</th>
+              <th>Score</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="game in filteredGames" :key="game.id" :class="{ 'completed': game.status === 'Completed' }">
+              <td>{{ formatDate(game.date) }}</td>
+              <td>{{ formatTime(game.time) }}</td>
+              <td class="teams-column">
+                <span class="team">{{ game.team1_name }}</span>
+                <span class="vs">vs</span>
+                <span class="team">{{ game.team2_name }}</span>
+              </td>
+              <td>
+                <span class="status-badge" :class="game.status.toLowerCase().replace(' ', '-')">
+                  {{ game.status }}
+                </span>
+              </td>
+              <td class="score-column">
+                <template v-if="game.team1_score !== null && game.team2_score !== null">
+                  <span>{{ game.team1_score }} - {{ game.team2_score }}</span>
+                </template>
+                <template v-else>
+                  <span class="no-score">Not scored</span>
+                </template>
+              </td>
+              <td class="actions-column">
+                <button 
+                  class="btn-edit"
+                  @click="openScoreModal(game)"
+                  :disabled="isEditingScores"
+                >
+                  {{ game.team1_score !== null ? 'Update Score' : 'Add Score' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
     
     <!-- Score Modal -->
@@ -151,6 +164,7 @@
 <script setup>
 import { ref, computed, onMounted, inject } from 'vue';
 import api from '../services/api';
+import currentTournament from '../store/current-tournament';
 
 // Notification function
 const showNotification = inject('showNotification');
@@ -174,6 +188,11 @@ const scoreForm = ref({
 });
 const isSaving = ref(false);
 const isEditingScores = ref(false);
+
+// Check if tournament is selected
+const isTournamentSelected = computed(() => {
+  return currentTournament.hasSelectedTournament();
+});
 
 // Format date for display
 const formatDate = (dateString) => {
@@ -271,11 +290,19 @@ const saveScore = async () => {
 
 // Fetch games data
 const fetchGames = async () => {
+  if (!isTournamentSelected.value) {
+    games.value = [];
+    loading.value = false;
+    return;
+  }
+  
   loading.value = true;
   error.value = null;
   
   try {
-    const response = await api.getSchedule();
+    const response = await api.getSchedule({ 
+      tournament_id: currentTournament.state.id 
+    });
     games.value = response.data;
   } catch (err) {
     error.value = 'Error loading games. Please try again.';
@@ -308,6 +335,32 @@ h1 {
   color: var(--color-text-light);
   margin-top: 0;
   margin-bottom: var(--space-lg);
+}
+
+/* Tournament Info & Warning styles */
+.tournament-info {
+  width: 100%;
+  background-color: #e7f5ff;
+  border: 1px solid #a5d8ff;
+  color: #0c63e4;
+  padding: 10px 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.no-tournament-warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffecb5;
+  color: #856404;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.no-tournament-warning p {
+  margin-bottom: 15px;
 }
 
 .filter-controls {

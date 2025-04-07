@@ -25,7 +25,7 @@
               id="name" 
               v-model="formData.name" 
               required 
-              placeholder="e.g., Spring Softball Classic"
+              placeholder="e.g., 8U division"
             />
           </div>
           
@@ -35,7 +35,7 @@
               id="description" 
               v-model="formData.description" 
               rows="4" 
-              placeholder="Optional: Provide a brief description or details about the tournament"
+              placeholder="Optional: Provide a brief description or details about the division or tournament"
             ></textarea>
           </div>
           
@@ -93,7 +93,7 @@
               placeholder="Leave blank to keep unchanged (if editing)"
               autocomplete="new-password"
             />
-            <p class="help-text">Set or update the password required to access admin functions (like scoring, scheduling) for <strong>this specific tournament</strong>.</p>
+            <p class="help-text">Set or update the password required to access admin functions (like scoring, scheduling) for <strong>this specific divison or tournament</strong>.</p>
           </div>
         </div>
         

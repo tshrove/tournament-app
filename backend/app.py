@@ -3,6 +3,7 @@ from flask_cors import CORS
 from database import db
 from models import Team, Game, BracketMatch, TournamentSettings, Tournament
 from datetime import datetime
+import json
 
 def create_app():
     app = Flask(__name__)
@@ -172,57 +173,70 @@ def get_rankings():
 # Bracket endpoint
 @app.route('/brackets', methods=['GET'])
 def get_bracket():
+    """Get the current tournament bracket structure"""
     try:
         tournament_id = request.args.get('tournament_id')
         
-        # Get bracket matches with optional tournament filter
-        query = BracketMatch.query
+        # Check if we have stored JSON in the tournament settings
         if tournament_id:
-            query = query.filter_by(tournament_id=tournament_id)
+            settings = TournamentSettings.query.filter_by(tournament_id=tournament_id).first()
+        else:
+            settings = TournamentSettings.query.first()
             
-        matches = query.order_by(BracketMatch.round_number, BracketMatch.match_display_id).all()
+        # If settings exist and have bracket_json, return that directly
+        if settings and settings.bracket_json:
+            try:
+                return jsonify(json.loads(settings.bracket_json))
+            except json.JSONDecodeError:
+                # If JSON is invalid, continue to generate from database
+                pass
         
-        # If no matches exist, return empty structure
+        # Get bracket matches with optional tournament filter
+        bracket_matches = BracketMatch.query
+        if tournament_id:
+            bracket_matches = bracket_matches.filter_by(tournament_id=tournament_id)
+            
+        matches = bracket_matches.all()
+        
+        # If no matches, return empty bracket
         if not matches:
             return jsonify({"rounds": {}})
-        
-        # Organize matches by round
+            
+        # Group matches by round
         rounds = {}
         for match in matches:
-            round_num = str(match.round_number)
-            if round_num not in rounds:
-                rounds[round_num] = []
-            
-            # Get team data if teams exist
-            team1 = Team.query.get(match.team1_id) if match.team1_id else None
-            team2 = Team.query.get(match.team2_id) if match.team2_id else None
-            winner = Team.query.get(match.winner_id) if match.winner_id else None
-            
-            # Create team objects with seed info
-            team1_data = None
-            team2_data = None
-            
-            if team1:
-                team1_data = team1.to_dict()
-                team1_data['seed'] = match.team1_seed
+            round_key = f"round_{match.round_number}"
+            if round_key not in rounds:
+                rounds[round_key] = []
                 
-            if team2:
-                team2_data = team2.to_dict()
-                team2_data['seed'] = match.team2_seed
-            
+            # Get team names
+            team1_name = None
+            team2_name = None
+            if match.team1_id:
+                team1 = Team.query.get(match.team1_id)
+                team1_name = team1.name if team1 else None
+            if match.team2_id:
+                team2 = Team.query.get(match.team2_id)
+                team2_name = team2.name if team2 else None
+                
             match_data = {
+                'id': match.id,
                 'matchId': match.match_display_id,
-                'round': match.round_number,
-                'team1': team1_data,
-                'team2': team2_data,
-                'team1_score': match.team1_score,
-                'team2_score': match.team2_score,
-                'winner': winner.to_dict() if winner else None,
+                'roundIndex': match.round_number,
+                'team1Id': match.team1_id,
+                'team2Id': match.team2_id,
+                'team1Name': team1_name,
+                'team2Name': team2_name,
+                'team1Score': match.team1_score,
+                'team2Score': match.team2_score,
+                'winnerId': match.winner_id,
+                'team1Seed': match.team1_seed,
+                'team2Seed': match.team2_seed,
                 'status': match.status,
                 'tournament_id': match.tournament_id
             }
-            rounds[round_num].append(match_data)
-        
+            rounds[round_key].append(match_data)
+            
         return jsonify({"rounds": rounds})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -419,13 +433,66 @@ def clear_bracket():
     """Clear the tournament bracket without generating a new one"""
     try:
         # Delete all bracket matches
-        BracketMatch.query.delete()
+        bracket_query = BracketMatch.query
+        data = request.get_json()
+        tournament_id = data.get('tournament_id') if data else None
         
-        # Also delete all bracket games from the schedule
-        Game.query.filter_by(game_type='Bracket').delete()
+        if tournament_id:
+            bracket_query = bracket_query.filter_by(tournament_id=tournament_id)
+        
+        bracket_query.delete()
+        db.session.commit()
+        
+        # Return empty bracket structure
+        return jsonify({"message": "Tournament bracket cleared successfully", "rounds": {}})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/brackets/save-json', methods=['POST'])
+def save_bracket_json():
+    """Save bracket JSON configuration for a tournament"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        bracket_json = data.get('bracket_json')
+        tournament_id = data.get('tournament_id')
+        
+        if not bracket_json:
+            return jsonify({"error": "No bracket JSON provided"}), 400
+            
+        # Validate that the JSON is valid
+        try:
+            json.loads(bracket_json)  # Just check if it's valid JSON
+        except json.JSONDecodeError as e:
+            return jsonify({"error": f"Invalid JSON: {str(e)}"}), 400
+            
+        # Ensure tournament exists if ID provided
+        if tournament_id:
+            tournament = Tournament.query.get(tournament_id)
+            if not tournament:
+                return jsonify({"error": f"Tournament with ID {tournament_id} not found"}), 404
+                
+        # Retrieve or create tournament settings
+        if tournament_id:
+            settings = TournamentSettings.query.filter_by(tournament_id=tournament_id).first()
+            if not settings:
+                settings = TournamentSettings(tournament_id=tournament_id)
+                db.session.add(settings)
+        else:
+            settings = TournamentSettings.query.first()
+            if not settings:
+                settings = TournamentSettings()
+                db.session.add(settings)
+                
+        # Store the JSON string
+        settings.bracket_json = bracket_json
         
         db.session.commit()
-        return jsonify({"message": "Tournament bracket cleared successfully", "rounds": {}})
+        return jsonify({"message": "Bracket JSON saved successfully"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

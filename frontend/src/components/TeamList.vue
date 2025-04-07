@@ -16,7 +16,8 @@
     <!-- Confirmation Dialog -->
     <div v-if="showConfirmDialog" class="confirm-dialog">
       <div class="confirm-dialog-content">
-        <p>Are you sure you want to delete "{{ teamToDelete?.name }}"?</p>
+        <p>Are you sure you want to delete "{{ teamToDelete?.name }}" from {{ tournamentName }}?</p>
+        <p class="warning-text">This will also remove all game data associated with this team.</p>
         <div class="dialog-buttons">
           <button @click="deleteTeam" class="confirm-btn">Yes, Delete</button>
           <button @click="cancelDelete" class="cancel-btn">Cancel</button>
@@ -27,8 +28,9 @@
 </template>
 
 <script setup>
-import { ref, inject } from 'vue';
+import { ref, inject, computed } from 'vue';
 import api from '../services/api';
+import currentTournament from '../store/current-tournament';
 
 const props = defineProps({
   teams: {
@@ -44,6 +46,11 @@ const showNotification = inject('showNotification');
 const deleting = ref(null);
 const showConfirmDialog = ref(false);
 const teamToDelete = ref(null);
+
+// Get tournament name for the confirmation dialog
+const tournamentName = computed(() => {
+  return currentTournament.state.name || 'the current tournament';
+});
 
 const confirmDelete = (team) => {
   teamToDelete.value = team;
@@ -64,7 +71,7 @@ const deleteTeam = async () => {
   try {
     await api.deleteTeam(teamToDelete.value.id);
     if (showNotification) {
-      showNotification(`Team "${teamToDelete.value.name}" has been deleted.`, 'success');
+      showNotification(`Team "${teamToDelete.value.name}" has been deleted from ${tournamentName.value}.`, 'success');
     }
     emit('teamDeleted');
   } catch (err) {
@@ -159,6 +166,12 @@ h3 {
   text-align: center;
 }
 
+.warning-text {
+  font-size: 0.9em;
+  color: #c53030;
+  margin-top: 10px;
+}
+
 .dialog-buttons {
   display: flex;
   justify-content: center;
@@ -175,20 +188,20 @@ h3 {
   cursor: pointer;
 }
 
+.confirm-btn:hover {
+  background-color: #e60000;
+}
+
 .cancel-btn {
-  background-color: #ccc;
+  background-color: #f0f0f0;
   color: #333;
-  border: none;
+  border: 1px solid #ddd;
   border-radius: 4px;
   padding: 8px 16px;
   cursor: pointer;
 }
 
-.confirm-btn:hover {
-  background-color: #e60000;
-}
-
 .cancel-btn:hover {
-  background-color: #bbb;
+  background-color: #e6e6e6;
 }
 </style> 

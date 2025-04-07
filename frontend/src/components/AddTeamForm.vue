@@ -15,6 +15,7 @@
 <script setup>
 import { ref, inject } from 'vue';
 import api from '../services/api';
+import currentTournament from '../store/current-tournament';
 
 // Inject the notification function
 const showNotification = inject('showNotification');
@@ -33,10 +34,23 @@ const submitTeam = async () => {
     isSuccess.value = false;
     return;
   }
+  
+  if (!currentTournament.hasSelectedTournament()) {
+    message.value = 'No tournament selected. Please select a tournament first.';
+    isSuccess.value = false;
+    if (showNotification) {
+      showNotification('No tournament selected. Please select a tournament first.', 'error');
+    }
+    return;
+  }
+
   submitting.value = true;
   message.value = '';
   try {
-    const response = await api.addTeam({ name: teamName.value });
+    const response = await api.addTeam({ 
+      name: teamName.value,
+      tournament_id: currentTournament.state.id 
+    });
     // Use global notification for success
     if (showNotification) {
       showNotification(response.data.message || 'Team added successfully!', 'success');

@@ -188,7 +188,14 @@ const formatDate = (dateString) => {
 // Format time for display
 const formatTime = (timeString) => {
   if (!timeString) return 'TBD';
-  return timeString.substring(0, 5); // Format HH:MM
+  const [hours, minutes] = timeString.split(':');
+  const date = new Date();
+  date.setHours(parseInt(hours), parseInt(minutes));
+  return date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  });
 };
 
 // Filter games based on selected filters

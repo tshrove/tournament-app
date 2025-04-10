@@ -92,30 +92,32 @@
       <!-- Tournament Bracket Section -->
       <section class="section bracket-section card">
         <div class="section-header">
-          <h2>Bracket</h2>
+          <h2>Brackets</h2>
           <router-link 
-              v-if="hasBrackets" 
+              v-if="allBrackets.length > 0" 
               :to="{ name: 'PublicBrackets', params: { id: tournamentId } }" 
               class="btn btn-outline-secondary btn-sm"
            >
              View All Brackets
            </router-link>
         </div>
-        <div v-if="loadingFirstBracket" class="loading-indicator">Loading bracket...</div>
-        <div v-else-if="firstBracketError" class="error-message">
-          {{ firstBracketError }}
+        <div v-if="loadingBrackets" class="loading-indicator">Loading brackets...</div>
+        <div v-else-if="bracketsError" class="error-message">
+          {{ bracketsError }}
         </div>
-        <div v-else-if="!hasBrackets" class="no-data-message">
+        <div v-else-if="allBrackets.length === 0" class="no-data-message">
           No brackets have been set up for this tournament yet.
         </div>
-        <div v-else-if="!firstBracketData" class="no-data-message">
-           Could not load data for the primary bracket ({{ firstBracketName }}).
-        </div>
-        <div v-else class="bracket-display-container">
-           <h3>{{ firstBracketName }}</h3>
-           <div class="tournament-bracket-wrapper">
-               <TournamentBracket :rounds="firstBracketData" />
-           </div>
+        <div v-else class="brackets-container">
+          <div v-for="bracket in allBrackets" :key="bracket.id" class="bracket-display-container">
+            <h3>{{ bracket.name }}</h3>
+            <div v-if="bracket.parseError" class="error-message">
+              {{ bracket.parseError }}
+            </div>
+            <div v-else class="tournament-bracket-wrapper">
+              <TournamentBracket :rounds="bracket.parsedData" />
+            </div>
+          </div>
         </div>
       </section>
       
@@ -234,6 +236,11 @@ const rankingsError = ref(null);
 const bracketData = ref(null);
 const bracketLoading = ref(true);
 const bracketError = ref(null);
+
+// New refs for all brackets
+const allBrackets = ref([]);
+const loadingBrackets = ref(false);
+const bracketsError = ref(null);
 
 // New refs for first bracket
 const firstBracketData = ref(null);
@@ -367,57 +374,40 @@ const fetchRankings = async () => {
   }
 };
 
-// Fetch bracket data
-const fetchBracket = async () => {
-  bracketLoading.value = true;
-  bracketError.value = null;
-  
-  try {
-    const response = await api.getBracket({ tournament_id: tournamentId.value });
-    bracketData.value = response.data;
-  } catch (err) {
-    console.error('Error loading bracket:', err);
-    bracketError.value = 'Failed to load bracket data.';
-  } finally {
-    bracketLoading.value = false;
-  }
-};
-
-// Fetch the first bracket
-const fetchFirstBracket = async () => {
+// Fetch all brackets
+const fetchAllBrackets = async () => {
   if (!tournamentId.value) return;
-  loadingFirstBracket.value = true;
-  firstBracketError.value = null;
-  firstBracketData.value = null;
-  firstBracketName.value = "";
-  hasBrackets.value = false;
+  loadingBrackets.value = true;
+  bracketsError.value = null;
+  allBrackets.value = [];
 
   try {
     const response = await api.getTournamentBrackets(tournamentId.value);
     const brackets = response.data || [];
     if (brackets.length > 0) {
-      hasBrackets.value = true;
-      const firstBracket = brackets[0];
-      firstBracketName.value = firstBracket.name;
-      try {
-        const parsedJson = JSON.parse(firstBracket.bracket_json);
-        firstBracketData.value = transformToVueTournamentFormat(parsedJson);
-        if (!firstBracketData.value) {
-            firstBracketError.value = `Failed to parse or transform data for bracket: ${firstBracket.name}.`;
+      // Sort brackets by ID before processing
+      const sortedBrackets = brackets.sort((a, b) => a.id - b.id);
+      allBrackets.value = sortedBrackets.map(bracket => {
+        try {
+          const parsedJson = JSON.parse(bracket.bracket_json);
+          return {
+            ...bracket,
+            parsedData: transformToVueTournamentFormat(parsedJson)
+          };
+        } catch (parseError) {
+          console.error(`Error parsing bracket JSON for ${bracket.name}:`, parseError);
+          return {
+            ...bracket,
+            parseError: `Failed to parse bracket data for ${bracket.name}`
+          };
         }
-      } catch (parseError) {
-        console.error("Error parsing first bracket JSON:", parseError);
-        firstBracketError.value = `Error loading data for bracket: ${firstBracket.name}. Invalid JSON.`;
-      }
-    } else {
-      // No brackets found for this tournament
-      console.log("No brackets found for tournament", tournamentId.value);
+      });
     }
   } catch (err) {
-    console.error("Error fetching brackets list for HomeView:", err);
-    firstBracketError.value = "Could not load bracket information.";
+    console.error("Error fetching brackets list:", err);
+    bracketsError.value = "Failed to load bracket information.";
   } finally {
-    loadingFirstBracket.value = false;
+    loadingBrackets.value = false;
   }
 };
 
@@ -473,8 +463,7 @@ const loadAllData = async () => {
   await fetchSettings();
   await fetchSchedule();
   await fetchRankings();
-  await fetchBracket();
-  await fetchFirstBracket();
+  await fetchAllBrackets();
 };
 
 // Watch for changes in the tournament ID
@@ -503,7 +492,7 @@ onMounted(() => {
   document.title = `${tournamentName.value} - Home`;
   fetchSchedule();
   fetchRankings();
-  fetchFirstBracket(); // Fetch bracket data on mount
+  fetchAllBrackets(); // Fetch bracket data on mount
 });
 </script>
 
@@ -966,4 +955,60 @@ onMounted(() => {
 /* .header-actions { ... } */
 /* .admin-btn { ... } */
 
+.bracket-section {
+  /* Specific styles for sections if needed */
+  overflow: hidden; /* Still needed */
+}
+
+.brackets-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.bracket-display-container {
+  background-color: var(--color-background-alt);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  border: 1px solid var(--color-border);
+}
+
+.bracket-display-container h3 {
+  margin-top: 0;
+  margin-bottom: var(--space-md);
+  color: var(--color-text);
+  font-size: 1.2rem;
+  text-align: center;
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tournament-bracket-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-md);
+  background-color: var(--color-background);
+  border-radius: var(--radius-sm);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .bracket-display-container {
+    padding: var(--space-md);
+  }
+  
+  .bracket-display-container h3 {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .bracket-display-container {
+    padding: var(--space-sm);
+  }
+  
+  .bracket-display-container h3 {
+    font-size: 1rem;
+  }
+}
 </style> 

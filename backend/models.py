@@ -6,6 +6,7 @@ class Team(db.Model):
     name = db.Column(db.String(100), nullable=False)
     wins = db.Column(db.Integer, default=0)
     losses = db.Column(db.Integer, default=0)
+    ties = db.Column(db.Integer, default=0)
     runs_scored = db.Column(db.Integer, default=0)
     runs_allowed = db.Column(db.Integer, default=0)
     run_differential = db.Column(db.Integer, default=0)
@@ -20,6 +21,7 @@ class Team(db.Model):
             'name': self.name,
             'wins': self.wins,
             'losses': self.losses,
+            'ties': self.ties,
             'runs_scored': self.runs_scored,
             'runs_allowed': self.runs_allowed,
             'run_differential': self.run_differential,

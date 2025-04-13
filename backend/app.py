@@ -117,20 +117,23 @@ def get_rankings():
         # Fetch all teams
         teams = Team.query.all()
         
-        # Calculate winning percentage for each team
+        # Calculate winning percentage and points for each team
         for team in teams:
             if team.games_played > 0:
                 team.win_percentage = round(team.wins / team.games_played, 3)
             else:
                 team.win_percentage = 0.0
+            
+            # Calculate points: 2 for win, 1 for tie, 0 for loss
+            team.points = (2 * team.wins) + (1 * team.ties)
         
         # Sort teams: 
-        # 1. By wins (descending)
+        # 1. By points (descending)
         # 2. By runs allowed (ascending - fewer runs against is better)
         ranked_teams = sorted(
             teams, 
             key=lambda t: (
-                -(t.wins or 0),  # Negative for descending order
+                -(t.points or 0),  # Negative for descending order
                 t.runs_allowed or 0  # Ascending order (fewer runs allowed is better)
             )
         )
@@ -141,12 +144,14 @@ def get_rankings():
             team_data = team.to_dict()
             team_data['rank'] = index + 1  # Add rank (1-based)
             
-            # Add win percentage to the response
+            # Add win percentage and points to the response
             if team.games_played > 0:
                 team_data['win_percentage'] = round(team.wins / team.games_played, 3)
             else:
                 team_data['win_percentage'] = 0.0
                 
+            team_data['points'] = (2 * team.wins) + (1 * team.ties)
+            
             rankings_data.append(team_data)
         
         return jsonify(rankings_data)
@@ -216,26 +221,28 @@ def generate_bracket():
         
         db.session.commit()
         
-        # Fetch teams ranked by win percentage
+        # Fetch teams
         teams = Team.query.all()
         
-        # Calculate winning percentage for each team
+        # Calculate winning percentage and points for each team
         for team in teams:
             if team.games_played > 0:
                 team.win_percentage = round(team.wins / team.games_played, 3)
             else:
                 team.win_percentage = 0.0
                 
-        # Sort teams by win percentage (descending)
+            # Calculate points: 2 for win, 1 for tie, 0 for loss
+            team.points = (2 * team.wins) + (1 * team.ties)
+                
+        # Sort teams by points (descending), then runs allowed (ascending)
         seeded_teams = sorted(
             teams, 
             key=lambda t: (
-                t.win_percentage or 0,
-                t.wins or 0, 
-                t.run_differential or 0,
-                t.runs_scored or 0
-            ), 
-            reverse=True
+                -(t.points or 0),
+                t.runs_allowed or 0,
+                -(t.run_differential or 0),
+                -(t.runs_scored or 0)
+            )
         )
         
         # Check if we have enough teams

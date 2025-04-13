@@ -136,7 +136,7 @@
                 <th>L</th>
                 <th>T</th>
                 <th>Pct</th>
-                <th>Runs For</th>
+                <th>Runs Scored</th>
                 <th>Runs Against</th>
                 <th>Diff</th>
               </tr>

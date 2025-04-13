@@ -8,8 +8,10 @@
           <th>Team Name</th>
           <th>W</th>
           <th>L</th>
+          <th>T</th>
+          <th>Pts</th>
           <th>Pct</th>
-          <th>Runs For</th>
+          <th>Runs Scored</th>
           <th>Runs Against</th>
           <th>Diff</th>
           <th>GP</th>
@@ -21,6 +23,8 @@
           <td class="team-name">{{ team.name }}</td>
           <td>{{ team.wins }}</td>
           <td>{{ team.losses }}</td>
+          <td>{{ team.ties !== undefined ? team.ties : 0 }}</td>
+          <td class="points"><strong>{{ team.points }}</strong></td>
           <td class="win-pct">{{ formatPercentage(team.win_percentage) }}</td>
           <td>{{ team.runs_scored }}</td>
           <td>{{ team.runs_allowed }}</td>

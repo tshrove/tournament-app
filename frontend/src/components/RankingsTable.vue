@@ -11,7 +11,7 @@
           <th>T</th>
           <th>Pts</th>
           <th>Pct</th>
-          <th>Runs For</th>
+          <th>Runs Scored</th>
           <th>Runs Against</th>
           <th>Diff</th>
           <th>GP</th>

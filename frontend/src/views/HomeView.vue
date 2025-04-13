@@ -134,6 +134,7 @@
                 <th>Team Name</th>
                 <th>W</th>
                 <th>L</th>
+                <th>T</th>
                 <th>Pct</th>
                 <th>Runs For</th>
                 <th>Runs Against</th>
@@ -146,6 +147,7 @@
                 <td class="team-name-cell">{{ team.name }}</td>
                 <td>{{ team.wins }}</td>
                 <td>{{ team.losses }}</td>
+                <td>{{ team.ties !== undefined ? team.ties : 0 }}</td>
                 <td class="win-pct">{{ formatPercentage(team.win_percentage) }}</td>
                 <td>{{ team.runs_scored }}</td>
                 <td>{{ team.runs_allowed }}</td>
@@ -166,7 +168,7 @@
               <div class="ranking-card-content">
                 <div class="ranking-stat">
                   <span class="stat-label">Record</span>
-                  <span class="stat-value">{{ team.wins }}-{{ team.losses }}</span>
+                  <span class="stat-value">{{ team.wins }}-{{ team.losses }}-{{ team.ties !== undefined ? team.ties : 0 }}</span>
                 </div>
                 <div class="ranking-stat">
                   <span class="stat-label">Win %</span>
@@ -771,9 +773,11 @@ onMounted(() => {
   .rankings-table th:nth-child(5),
   .rankings-table th:nth-child(6),
   .rankings-table th:nth-child(7),
+  .rankings-table th:nth-child(8),
   .rankings-table td:nth-child(5),
   .rankings-table td:nth-child(6),
-  .rankings-table td:nth-child(7) {
+  .rankings-table td:nth-child(7),
+  .rankings-table td:nth-child(8) {
     display: none; /* Hide less important columns on mobile */
   }
   

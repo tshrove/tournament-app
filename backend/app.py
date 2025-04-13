@@ -715,19 +715,21 @@ def update_game_score(game_id):
             team2.runs_scored -= game.team2_score
             team2.runs_allowed -= game.team1_score
             
-            # Reverse win/loss records
+            # Decrement games_played as we are reversing a completed game
+            team1.games_played -= 1
+            team2.games_played -= 1
+            
+            # Reverse win/loss/tie records
             if game.team1_score > game.team2_score:
                 team1.wins -= 1
                 team2.losses -= 1
             elif game.team2_score > game.team1_score:
                 team2.wins -= 1
                 team1.losses -= 1
+            else: # It was a tie
+                team1.ties -= 1
+                team2.ties -= 1
                 
-            # Also decrement games_played if this is the first time the game is being completed
-            if game.status != 'Completed':
-                team1.games_played -= 1
-                team2.games_played -= 1
-        
         # Update game scores
         game.team1_score = data['team1_score']
         game.team2_score = data['team2_score']
@@ -753,13 +755,16 @@ def update_game_score(game_id):
             team2.runs_scored += game.team2_score
             team2.runs_allowed += game.team1_score
             
-            # Update win/loss records
+            # Update win/loss/tie records
             if game.team1_score > game.team2_score:
                 team1.wins += 1
                 team2.losses += 1
             elif game.team2_score > game.team1_score:
                 team2.wins += 1
                 team1.losses += 1
+            else: # It's a tie
+                team1.ties += 1
+                team2.ties += 1
                 
             # Update run differentials
             team1.run_differential = team1.runs_scored - team1.runs_allowed
